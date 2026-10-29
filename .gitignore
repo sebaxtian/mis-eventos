@@ -1,0 +1,52 @@
+# Entornos virtuales y dependencias de Python
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Dependencias de Node.js (Frontend)
+frontend/node_modules/
+frontend/dist/
+frontend/dist-ssr/
+frontend/.DS_Store
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/.eslintcache
+
+# Archivos de caché y logs de Python
+*.log
+*.pot
+*.pyc
+.pytest_cache/
+.coverage
+coverage.xml
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# Entorno local y secretos
+.env.local
+.env.*.local
+*.pem
+secrets/
+
+# IDEs y Editores
+.vscode/
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+.idea/
+*.swp
+*.swo
+
+# Docker y OS
+.DS_Store
+Thumbs.db
