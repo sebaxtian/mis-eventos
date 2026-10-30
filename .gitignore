@@ -47,6 +47,9 @@ secrets/
 *.swp
 *.swo
 
+# OpenCode (configuración local del agente)
+.opencode/
+
 # Docker y OS
 .DS_Store
 Thumbs.db
