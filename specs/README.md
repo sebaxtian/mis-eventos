@@ -1,7 +1,7 @@
 # Plan de Especificaciones Funcionales (SDD) - Mis Eventos
 
-**Versión:** 1.2
-**Fecha:** 30 de octubre de 2026
+**Versión:** 1.3
+**Fecha:** 31 de octubre de 2026
 **Estado:** Vigente
 **Metodología:** Spec-Driven Development (SDD)
 
@@ -47,15 +47,11 @@ Base técnica transversal de la que dependen todos los demás dominios.
 
 Determina la identidad y los límites de acceso de cada actor.
 
-- **Alcance Backend:** registro de usuarios (rol Asistente por defecto), inicio de sesión, emisión de JWT y **hash** adaptativo de contraseñas con sal (bcrypt o argon2, R5.1).
+- **Alcance Backend:** registro de usuarios (rol Asistente por defecto), inicio de sesión, emisión de JWT y **hash** adaptativo de contraseñas con sal **argon2id** (R5.1).
 - **Control de Acceso (RBAC):** matriz de permisos para `ADMIN`, `ORGANIZER` y `ATTENDEE` (R5.3, R6.1).
 - **Reglas Críticas:** validación atómica en una única cadena de **dependencias** de FastAPI, todo o nada (R5.2). HTTP 401 para token ausente, inválido o expirado y HTTP 403 para usuario autenticado sin privilegios (R5.6). Gestión de perfiles exclusiva del Admin.
 - **Alcance Frontend:** `useAuthStore`; interceptor de Axios (401 → limpiar sesión y redirigir a login; 403 → mantener sesión y mostrar aviso); guards de Vue Router; vistas de login, registro y perfil.
-- **Preguntas abiertas:**
-  - Cómo se crea el primer Admin (propuesta: desde variables de entorno al arrancar, sin secretos en el repo, R5.7).
-  - Cómo se crea un Organizador (propuesta: solo por promoción de un Admin).
-  - Campos del perfil (email, nombre, ¿otros?) y si existe desactivación de usuarios (`is_active`); si existe, R5.2 debe comprobarla.
-  - Qué roles pueden inscribirse a eventos (la arquitectura §4 indica que el Organizador no ve "Inscribirse"; falta decidir el Admin).
+- **Preguntas abiertas:** _(Resueltas en `specs/auth/spec.md` §12: JWT único HS256 de 480 min; bootstrap por entorno; promoción solo por `ADMIN`; perfil mínimo con `is_active`; solo `ATTENDEE` se inscribe; `sessionStorage`; contrato JSON con argon2id.)_
 
 ### 1.2. Dominio: Gestión de Eventos y Catálogo (`specs/events/`)
 
@@ -119,7 +115,7 @@ Principios transversales que aplican a **todas** las specs: R2 (aislamiento), R3
 | Orden | Directorio             | Dominio                        | Dependencias                 | Principios específicos                                                                        | Bonus cubiertos                                     | Decisiones bloqueantes                                                   |
 | :---: | :--------------------- | :----------------------------- | :--------------------------- | :-------------------------------------------------------------------------------------------- | :-------------------------------------------------- | :----------------------------------------------------------------------- |
 | **0** | `specs/platform/`      | Plataforma                     | _(Ninguna)_                  | R2.1, R2.2, R3.6, R3.9, R5.7, R6 (422 en español)                                             | Minificación, lazy loading de rutas                 | — (resueltas en la arquitectura v1.1: UV, PostgreSQL en tests, TypeScript ligero) |
-| **1** | `specs/auth/`          | Autenticación, RBAC y Perfiles | `platform`                   | R5.1, R5.2, R5.3, R5.6, R5.8, R5.9                                                            | Roles, permisos por rol, gestión de perfiles        | Estrategia de JWT (token único o access + refresh)                       |
+| **1** | `specs/auth/`          | Autenticación, RBAC y Perfiles | `platform`                   | R5.1, R5.2, R5.3, R5.6, R5.8, R5.9                                                            | Roles, permisos por rol, gestión de perfiles        | — (resueltas en `specs/auth/spec.md` §12)                                 |
 | **2** | `specs/events/`        | Eventos y Catálogo             | `auth`                       | R3.6 (`pg_trgm`), R4.4 (caché Redis), R2.5 (cupos desde la API)                               | Imágenes WebP, lazy loading de componentes, caching | — (diseño de imágenes resuelto en la arquitectura v1.1 §3.8)             |
 | **3** | `specs/sessions/`      | Programación de Sesiones       | `events`                     | R3.4 (solapamiento), R5.3 (propiedad del evento)                                              | —                                                   | —                                                                        |
 | **4** | `specs/registrations/` | Inscripciones y Capacidad      | `auth`, `events`, `sessions` | R3.4 (límites y concurrencia), R3.6 (bloqueos en PostgreSQL), R5.4, R5.8, R4.4 (invalidación) | —                                                   | —                                                                        |
@@ -166,7 +162,7 @@ Cada requisito de `docs/prueba_tecnica_desarrollador_fullstack.md` tiene un domi
 | Orden | Dominio         | Estado                 | Versión | Última actualización |
 | :---: | --------------- | ---------------------- | ------- | -------------------- |
 |   0   | `platform`      | Implementada           | 1.0     | 2026-10-31           |
-|   1   | `auth`          | Pendiente de redacción | —       | —                    |
+|   1   | `auth`          | Implementada           | 1.0     | 2026-10-31           |
 |   2   | `events`        | Pendiente de redacción | —       | —                    |
 |   3   | `sessions`      | Pendiente de redacción | —       | —                    |
 |   4   | `registrations` | Pendiente de redacción | —       | —                    |

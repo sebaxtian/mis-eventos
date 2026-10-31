@@ -1,9 +1,17 @@
 <script setup lang="ts">
-import { RouterLink, RouterView } from 'vue-router'
+import { RouterLink, RouterView, useRouter } from 'vue-router'
 import BaseAlert from '@/components/base/BaseAlert.vue'
+import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 
+const router = useRouter()
+const authStore = useAuthStore()
 const notificationStore = useNotificationStore()
+
+async function handleLogout(): Promise<void> {
+  authStore.logout()
+  await router.push({ name: 'login' })
+}
 </script>
 
 <template>
@@ -17,9 +25,33 @@ const notificationStore = useNotificationStore()
           <RouterLink to="/" class="hover:text-indigo-600">
             Eventos
           </RouterLink>
-          <RouterLink to="/login" class="hover:text-indigo-600">
-            Iniciar sesión
-          </RouterLink>
+          <template v-if="authStore.isAuthenticated">
+            <RouterLink
+              v-if="authStore.isAdmin"
+              to="/admin/users"
+              class="hover:text-indigo-600"
+            >
+              Administración
+            </RouterLink>
+            <RouterLink to="/profile" class="hover:text-indigo-600">
+              Mi perfil
+            </RouterLink>
+            <button
+              type="button"
+              class="text-slate-700 hover:text-indigo-600"
+              @click="handleLogout"
+            >
+              Cerrar sesión
+            </button>
+          </template>
+          <template v-else>
+            <RouterLink to="/login" class="hover:text-indigo-600">
+              Iniciar sesión
+            </RouterLink>
+            <RouterLink to="/register" class="hover:text-indigo-600">
+              Registrarse
+            </RouterLink>
+          </template>
         </div>
       </nav>
     </header>

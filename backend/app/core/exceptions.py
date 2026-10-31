@@ -44,6 +44,8 @@ def _translate_validation_error(err: dict[str, Any]) -> str:
 
     if err_type == "json_invalid":
         return "El cuerpo de la petición no es un JSON válido"
+    if err_type == "extra_forbidden":
+        return "Este campo no está permitido"
     if err_type == "missing":
         return "Este campo es obligatorio"
     if err_type == "string_too_short":
@@ -77,8 +79,19 @@ def _translate_validation_error(err: dict[str, Any]) -> str:
     if err_type == "enum":
         expected = ctx.get("expected", "")
         return f"Valor no permitido; valores válidos: {expected}".strip()
+    if err_type == "string_pattern_mismatch":
+        return "El formato del campo no es válido"
     if err_type == "value_error":
         custom_err = ctx.get("error")
+        reason = ctx.get("reason")
+        loc_parts = [str(item).lower() for item in (err.get("loc") or ())]
+        combined_lower = f"{msg} {custom_err or ''} {reason or ''}".lower()
+        if (
+            "email" in combined_lower
+            or "correo electrónico" in combined_lower
+            or "email" in loc_parts
+        ):
+            return "El correo electrónico no es válido"
         if custom_err is not None:
             text = str(custom_err)
             if text and not text.lower().startswith("value error"):
@@ -100,10 +113,15 @@ async def http_exception_handler(
             exc.status_code,
             "Error al procesar la solicitud",
         )
+    headers = dict(exc.headers or {})
+    if exc.status_code == 401 and not any(
+        k.lower() == "www-authenticate" for k in headers
+    ):
+        headers["WWW-Authenticate"] = "Bearer"
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail": detail},
-        headers=exc.headers,
+        headers=headers or None,
     )
 
 

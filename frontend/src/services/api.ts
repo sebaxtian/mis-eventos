@@ -14,6 +14,11 @@ export type NavigationRedirectHandler = (location: {
 
 let redirectHandler: NavigationRedirectHandler | null = null
 let currentRoutePathGetter: (() => string) | null = null
+let unauthorizedHandled = false
+
+export function resetUnauthorizedState(): void {
+  unauthorizedHandled = false
+}
 
 export function configureApiNavigation(
   onRedirect: NavigationRedirectHandler,
@@ -21,6 +26,7 @@ export function configureApiNavigation(
 ): void {
   redirectHandler = onRedirect
   currentRoutePathGetter = getCurrentPath ?? null
+  unauthorizedHandled = false
 }
 
 function isLoginEndpoint(url?: string): boolean {
@@ -53,8 +59,9 @@ export async function handleApiResponseError(
         detail || 'Credenciales inválidas',
         'error',
       )
-    } else {
+    } else if (!unauthorizedHandled) {
       authStore.clearSession()
+      unauthorizedHandled = true
       notificationStore.notify(
         'Tu sesión ha expirado. Inicia sesión nuevamente.',
         'warning',
@@ -71,7 +78,13 @@ export async function handleApiResponseError(
       detail || 'No tienes permisos para realizar esta acción',
       'warning',
     )
-  } else if (status === 400 || status === 404 || status === 409 || status === 422) {
+  } else if (status === 422) {
+    const firstFieldMsg = error.response?.data?.errors?.[0]?.message
+    notificationStore.notify(
+      firstFieldMsg || detail || 'Error de validación en los datos enviados',
+      'error',
+    )
+  } else if (status === 400 || status === 404 || status === 409) {
     notificationStore.notify(
       detail || 'Error al procesar la solicitud',
       'error',

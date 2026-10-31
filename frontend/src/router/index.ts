@@ -25,7 +25,20 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/login',
     name: 'login',
-    component: () => import('@/views/LoginPlaceholderView.vue'),
+    component: () => import('@/views/LoginView.vue'),
+  },
+  {
+    path: '/register',
+    name: 'register',
+    component: () => import('@/views/RegisterView.vue'),
+  },
+  {
+    path: '/profile',
+    name: 'profile',
+    component: () => import('@/views/ProfileView.vue'),
+    meta: {
+      requiresAuth: true,
+    },
   },
   {
     path: '/admin',
@@ -36,33 +49,64 @@ export const routes: RouteRecordRaw[] = [
       roles: ['ADMIN'],
     },
   },
+  {
+    path: '/admin/users',
+    name: 'admin-users',
+    component: () => import('@/views/AdminUsersView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['ADMIN'],
+    },
+  },
+  {
+    path: '/_placeholder/login',
+    name: 'login-placeholder',
+    component: () => import('@/views/LoginPlaceholderView.vue'),
+  },
 ]
+
+export function resolveSafeRedirect(rawRedirect: unknown): string {
+  if (typeof rawRedirect !== 'string') return '/'
+  const trimmed = rawRedirect.trim()
+  if (!trimmed.startsWith('/') || trimmed.startsWith('//')) {
+    return '/'
+  }
+  return trimmed
+}
 
 export function registerNavigationGuards(routerInstance: Router): Router {
   routerInstance.beforeEach((to) => {
     const authStore = useAuthStore()
     const notificationStore = useNotificationStore()
 
-    if (to.meta.requiresAuth && !authStore.isAuthenticated) {
-      return {
-        name: 'login',
-        query: { redirect: to.fullPath },
+    const evaluateGuard = () => {
+      if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+        return {
+          name: 'login',
+          query: { redirect: to.fullPath },
+        }
       }
+
+      if (
+        to.meta.roles &&
+        to.meta.roles.length > 0 &&
+        (!authStore.role || !to.meta.roles.includes(authStore.role))
+      ) {
+        notificationStore.notify(
+          'No tienes permisos para acceder a esta sección',
+          'warning',
+        )
+        return { name: 'home' }
+      }
+
+      return true
     }
 
-    if (
-      to.meta.roles &&
-      to.meta.roles.length > 0 &&
-      (!authStore.role || !to.meta.roles.includes(authStore.role))
-    ) {
-      notificationStore.notify(
-        'No tienes permisos para acceder a esta sección',
-        'warning',
-      )
-      return { name: 'home' }
+    if (!authStore.initialized) {
+      return authStore.initialize().then(() => evaluateGuard())
     }
 
-    return true
+    return evaluateGuard()
   })
 
   return routerInstance

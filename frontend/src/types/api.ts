@@ -3,9 +3,49 @@ export type UserRole = 'ADMIN' | 'ORGANIZER' | 'ATTENDEE'
 export interface AuthUser {
   id: number
   email: string
-  full_name?: string
+  full_name: string
   role: UserRole
+  is_active: boolean
+  created_at: string
+  updated_at: string
 }
+
+export interface RegisterPayload {
+  email: string
+  password: string
+  full_name: string
+}
+
+export interface LoginPayload {
+  email: string
+  password: string
+}
+
+export interface LoginResponse {
+  access_token: string
+  token_type: 'bearer'
+  expires_in: number
+  user: AuthUser
+}
+
+export interface UpdateProfilePayload {
+  full_name: string
+}
+
+export interface AdminUserUpdatePayload {
+  full_name?: string
+  role?: UserRole
+  is_active?: boolean
+}
+
+export interface UserListParams {
+  page?: number
+  size?: number
+  role?: UserRole
+  is_active?: boolean
+}
+
+export type UserListResponse = PaginatedResponse<AuthUser>
 
 export interface PaginatedResponse<T> {
   items: T[]

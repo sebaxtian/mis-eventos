@@ -28,7 +28,12 @@ services:
       TEST_DATABASE_URL: postgresql+psycopg://${POSTGRES_USER:-postgres}:${POSTGRES_PASSWORD:-postgres}@db:5432/${POSTGRES_TEST_DB:-mis_eventos_test}
       REDIS_URL: redis://redis:6379/0
       MEDIA_ROOT: ${MEDIA_ROOT:-/app/media}
+      APP_ENV: ${APP_ENV:-development}
       JWT_SECRET_KEY: ${JWT_SECRET_KEY:-change-me-in-production-min-32-chars}
+      JWT_EXPIRE_MINUTES: ${JWT_EXPIRE_MINUTES:-480}
+      BOOTSTRAP_ADMIN_EMAIL: ${BOOTSTRAP_ADMIN_EMAIL:-}
+      BOOTSTRAP_ADMIN_PASSWORD: ${BOOTSTRAP_ADMIN_PASSWORD:-}
+      BOOTSTRAP_ADMIN_FULL_NAME: ${BOOTSTRAP_ADMIN_FULL_NAME:-Administrador}
     volumes:
       - media:/app/media
     expose:

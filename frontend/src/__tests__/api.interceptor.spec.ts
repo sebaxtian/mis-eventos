@@ -47,7 +47,11 @@ describe('Axios API client and error interceptor', () => {
     authStore.setSession('jwt-token-123', {
       id: 1,
       email: 'user@example.com',
+      full_name: 'Usuario Test',
       role: 'ATTENDEE',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
     })
 
     const redirectSpy = vi.fn()
@@ -88,7 +92,11 @@ describe('Axios API client and error interceptor', () => {
     authStore.setSession('jwt-token-active', {
       id: 2,
       email: 'attendee@example.com',
+      full_name: 'Asistente Test',
       role: 'ATTENDEE',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
     })
 
     const redirectSpy = vi.fn()
@@ -149,6 +157,109 @@ describe('Axios API client and error interceptor', () => {
     ).rejects.toThrow()
     expect(notificationStore.lastMessage).toBe(
       'No se pudo completar la operación. Inténtalo de nuevo más tarde.',
+    )
+  })
+
+  it('AUTH-AC-25 handles concurrent 401 responses with one notice and redirect preserving redirect query', async () => {
+    const authStore = useAuthStore()
+    const notificationStore = useNotificationStore()
+    authStore.setSession('jwt-token-concurrent', {
+      id: 7,
+      email: 'ana@example.com',
+      full_name: 'Ana Pérez',
+      role: 'ATTENDEE',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
+    })
+
+    const redirectSpy = vi.fn()
+    configureApiNavigation(redirectSpy, () => '/profile?tab=info')
+
+    const results = await Promise.allSettled([
+      handleApiResponseError(
+        makeAxiosError(401, '/auth/me', 'No autenticado o sesión expirada'),
+      ),
+      handleApiResponseError(
+        makeAxiosError(401, '/events/10', 'No autenticado o sesión expirada'),
+      ),
+      handleApiResponseError(
+        makeAxiosError(401, '/users', 'No autenticado o sesión expirada'),
+      ),
+    ])
+
+    expect(results.every((r) => r.status === 'rejected')).toBe(true)
+    expect(authStore.isAuthenticated).toBe(false)
+    expect(window.sessionStorage.getItem('mis_eventos.auth.token')).toBeNull()
+    expect(notificationStore.notifications).toHaveLength(1)
+    expect(redirectSpy).toHaveBeenCalledTimes(1)
+    expect(redirectSpy).toHaveBeenCalledWith({
+      name: 'login',
+      query: { redirect: '/profile?tab=info' },
+    })
+  })
+
+  it('AUTH-AC-26 keeps session and shows Spanish notice on 403 while login 401 does not redirect', async () => {
+    const authStore = useAuthStore()
+    const notificationStore = useNotificationStore()
+    authStore.setSession('jwt-session-26', {
+      id: 8,
+      email: 'attendee@example.com',
+      full_name: 'Ana Pérez',
+      role: 'ATTENDEE',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
+    })
+
+    const redirectSpy = vi.fn()
+    configureApiNavigation(redirectSpy, () => '/admin/users')
+
+    await expect(
+      handleApiResponseError(
+        makeAxiosError(
+          403,
+          '/users',
+          'No tienes permisos para realizar esta acción',
+        ),
+      ),
+    ).rejects.toThrow()
+
+    expect(authStore.isAuthenticated).toBe(true)
+    expect(window.sessionStorage.getItem('mis_eventos.auth.token')).toBe(
+      'jwt-session-26',
+    )
+    expect(redirectSpy).not.toHaveBeenCalled()
+    expect(notificationStore.lastMessage).toBe(
+      'No tienes permisos para realizar esta acción',
+    )
+
+    notificationStore.clear()
+    await expect(
+      handleApiResponseError(
+        makeAxiosError(401, '/auth/login', 'Credenciales inválidas'),
+      ),
+    ).rejects.toThrow()
+
+    expect(redirectSpy).not.toHaveBeenCalled()
+    expect(notificationStore.lastMessage).toBe('Credenciales inválidas')
+
+    const validationErr = makeAxiosError(
+      422,
+      '/auth/register',
+      'Error de validación en los datos enviados',
+    )
+    if (validationErr.response) {
+      validationErr.response.data = {
+        detail: 'Error de validación en los datos enviados',
+        errors: [
+          { field: 'email', message: 'El correo electrónico no es válido' },
+        ],
+      }
+    }
+    await expect(handleApiResponseError(validationErr)).rejects.toThrow()
+    expect(notificationStore.lastMessage).toBe(
+      'El correo electrónico no es válido',
     )
   })
 })

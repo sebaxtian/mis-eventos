@@ -9,6 +9,7 @@ import { useNotificationStore } from '@/stores/notification'
 describe('Vue Router lazy loading and UX navigation guards', () => {
   beforeEach(() => {
     setActivePinia(createPinia())
+    window.sessionStorage.clear()
   })
 
   it('PLAT-AC-16 enforces UX navigation guards for requiresAuth and role restrictions with lazy-loaded routes', async () => {
@@ -29,7 +30,11 @@ describe('Vue Router lazy loading and UX navigation guards', () => {
     authStore.setSession('token-attendee', {
       id: 10,
       email: 'attendee@example.com',
+      full_name: 'Asistente',
       role: 'ATTENDEE',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
     })
 
     await router.push('/admin')
@@ -41,7 +46,11 @@ describe('Vue Router lazy loading and UX navigation guards', () => {
     authStore.setSession('token-admin', {
       id: 1,
       email: 'admin@example.com',
+      full_name: 'Administrador',
       role: 'ADMIN',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
     })
 
     await router.push('/admin')
@@ -77,6 +86,67 @@ describe('Vue Router lazy loading and UX navigation guards', () => {
       expect(files.some((f) => f.startsWith('LoginPlaceholderView-'))).toBe(true)
       expect(files.some((f) => f.startsWith('AdminPlaceholderView-'))).toBe(true)
     }
+  })
+
+  it('AUTH-AC-27 guard redirects unauthenticated to login and returns to original route after login', async () => {
+    const authStore = useAuthStore()
+    const router = createAppRouter(true)
+
+    await router.push('/profile')
+    await router.isReady()
+
+    expect(router.currentRoute.value.name).toBe('login')
+    expect(router.currentRoute.value.query.redirect).toBe('/profile')
+
+    authStore.setSession('token-attendee', {
+      id: 10,
+      email: 'attendee@example.com',
+      full_name: 'Ana Pérez',
+      role: 'ATTENDEE',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
+    })
+
+    const target = String(router.currentRoute.value.query.redirect || '/')
+    await router.push(target)
+    expect(router.currentRoute.value.name).toBe('profile')
+    expect(router.currentRoute.value.fullPath).toBe('/profile')
+  })
+
+  it('AUTH-AC-27 guard redirects role mismatch to home and ignores external redirect targets', async () => {
+    const { resolveSafeRedirect } = await import('@/router')
+    const authStore = useAuthStore()
+    const notificationStore = useNotificationStore()
+    const router = createAppRouter(true)
+
+    authStore.setSession('token-organizer', {
+      id: 20,
+      email: 'org@example.com',
+      full_name: 'Organizador',
+      role: 'ORGANIZER',
+      is_active: true,
+      created_at: '2026-10-31T12:00:00Z',
+      updated_at: '2026-10-31T12:00:00Z',
+    })
+
+    await router.push('/admin/users')
+    await router.isReady()
+
+    expect(router.currentRoute.value.name).toBe('home')
+    expect(notificationStore.lastMessage).toBe(
+      'No tienes permisos para acceder a esta sección',
+    )
+
+    expect(resolveSafeRedirect('/profile')).toBe('/profile')
+    expect(resolveSafeRedirect('/admin/users?page=2')).toBe(
+      '/admin/users?page=2',
+    )
+    expect(resolveSafeRedirect('https://evil.example.com')).toBe('/')
+    expect(resolveSafeRedirect('http://evil.example.com/phish')).toBe('/')
+    expect(resolveSafeRedirect('//evil.example.com')).toBe('/')
+    expect(resolveSafeRedirect('javascript:alert(1)')).toBe('/')
+    expect(resolveSafeRedirect(undefined)).toBe('/')
   })
 })
 

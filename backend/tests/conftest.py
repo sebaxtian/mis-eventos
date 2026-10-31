@@ -13,6 +13,23 @@ from app.core.database import get_session
 from app.main import app
 
 
+@pytest.fixture(autouse=True)
+def low_cost_password_hasher(monkeypatch: pytest.MonkeyPatch):
+    from argon2 import PasswordHasher
+    from app.auth import security
+
+    hasher = PasswordHasher(time_cost=1, memory_cost=1024, parallelism=1)
+    monkeypatch.setattr(security, "_password_hasher", hasher)
+    monkeypatch.setattr(
+        security,
+        "DUMMY_PASSWORD_HASH",
+        hasher.hash("mis-eventos-dummy-password"),
+    )
+    monkeypatch.setattr(settings, "bootstrap_admin_email", None)
+    monkeypatch.setattr(settings, "bootstrap_admin_password", None)
+    return hasher
+
+
 def _resolve_db_url(raw_url: str) -> str:
     url = raw_url
     if "@db:" in url:

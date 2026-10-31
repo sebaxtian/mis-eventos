@@ -2,10 +2,22 @@
 
 ## Estado del repo
 
-- Repo en fase de especificación: `README.md` en la raíz, `specs/` con índice y plantillas, y `backend/`, `frontend/` e `infra/` solo con `.gitkeep` (sin specs de dominio redactadas todavía). No hay manifests, scripts, CI ni comandos verificables aún. No inventes comandos; cuando se agreguen `pyproject.toml`, `package.json` o `docker-compose.yml`, actualiza este archivo con los comandos reales.
-- Fuentes de verdad actuales (en español):
-  - `docs/prueba_tecnica_desarrollador_fullstack.md` — requisitos de la prueba técnica (Tusdatos.co, plazo 5 días).
-  - `docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md` — arquitectura v1.1 (alineada con la constitución v1.1.1).
+- Fase: **implementación incremental** mediante SDD. Los Dominios 0 (`platform`, v1.0) y 1 (`auth`, v1.0) están implementados y validados; el producto completo **no** está terminado.
+- Dominio 0 (`platform`): infraestructura ejecutable, esqueleto de backend y frontend, y suites TDD. Validado con 18 criterios `PLAT-AC`, `pytest` contra PostgreSQL (12/12, cobertura 85 %), `Vitest` (6/6, cobertura 88.75 %), `vue-tsc`, build de Vite y `docker compose` con el gateway en `http://localhost:8080`. Los detalles viven en `specs/platform/` y en `MEMORY.md`.
+- Dominio 1 (`auth`): registro, login con JWT HS256, hash argon2id, RBAC (`ADMIN`/`ORGANIZER`/`ATTENDEE`), perfil propio y gestión de perfiles por el `ADMIN`, con 12 reglas `AUTH-BR`, 31 criterios `AUTH-AC` y 48 tareas TDD. Validado en su cierre con `pytest` 43/43 (cobertura 94 %), `Vitest` 19/19 (cobertura 89.17 %), `vue-tsc`, build de Vite, migración `0002_create_users (head)` y gateway Nginx. Los detalles viven en `specs/auth/` y en `MEMORY.md`.
+- Implementación real ya existente:
+  - `backend/`: FastAPI sobre Python 3.14 con UV (`pyproject.toml` + `uv.lock`), Alembic (`0002_create_users`), `pg_trgm`, salud con Redis prescindible, paginación y errores en español; autenticación JWT, argon2id, RBAC, perfiles y administración de usuarios.
+  - `frontend/`: Vue 3 + TypeScript ligero + Vite (`package.json` + `package-lock.json`), Vue Router, Pinia, Axios, Tailwind y componentes base con Vitest; `useAuthStore` con `sessionStorage`, guards y vistas de login, registro, perfil y administración de usuarios.
+  - `infra/`: `docker-compose.yml` con `gateway`, `web`, `api`, `db`, `redis` y volumen `media`; `infra/nginx/default.conf` e `infra/postgres/init-test-db.sql`; Dockerfiles en `backend/` y `frontend/`.
+- Documentación operativa existente: `backend/README.md` y `frontend/README.md` (requisitos, desarrollo, pruebas, cobertura, Alembic, build y estructura).
+- Dominios pendientes: `events`, `sessions`, `registrations` y `delivery`. El siguiente es `events`; **no se implementa hasta que su `spec.md`, `plan.md` y `tasks.md` estén redactados y aprobados por el usuario** (R1.8).
+- Fuentes de verdad vigentes (en español, por orden de prevalencia):
+  1. `docs/constitution.md` — principios innegociables; prevalece sobre specs, arquitectura y código.
+  2. `docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md` — arquitectura v1.1.
+  3. `docs/prueba_tecnica_desarrollador_fullstack.md` — requisitos de la prueba (Tusdatos.co, plazo 5 días).
+  4. `specs/README.md` y `specs/<dominio>/` — índice, dependencias, estado y artefactos por dominio.
+  5. `README.md`, `backend/README.md` y `frontend/README.md` — alcance y operación.
+  6. `MEMORY.md` — bitácora viva (decisiones, progreso, tropiezos).
 
 ## Metodología
 
@@ -15,6 +27,14 @@
 - Antes de implementar: identifica el dominio en curso y comprueba que su `spec.md` esté en estado _Aprobada_. Solo el usuario aprueba specs; nunca cambies ese estado por tu cuenta.
 - Cada dominio usa `specs/<dominio>/spec.md` (qué), `plan.md` (cómo) y `tasks.md` (tareas TDD), copiados de `specs/_template/`. Criterios de aceptación en notación EARS con IDs `<DOM>-AC-NN`; cada test lleva ese ID en su nombre.
 - Docs y commits en español; commits estilo Conventional Commits (`chore: ...`, `feat: ...`).
+
+## Comandos del proyecto
+
+- **Todo el sistema** (desde la raíz): `docker compose up -d --build`. Gateway único en `http://localhost:8080`; rutas verificables `/`, `/api/health`, `/api/docs` y `/api/openapi.json`. El contenedor `api` aplica `uv run alembic upgrade head` al iniciar (definido en `docker-compose.yml`).
+- **Solo PostgreSQL y Redis** (desde la raíz): `docker compose up -d db redis`.
+- **Backend** (desde `backend/`): `uv run pytest`, `uv run pytest --cov=app --cov-report=xml --cov-report=term-missing`, `uv run alembic current`, `uv run alembic history`. La suite corre siempre contra PostgreSQL en contenedor, nunca SQLite.
+- **Frontend** (desde `frontend/`): `npm run dev`, `npm run test -- --run`, `npx vitest run --coverage`, `npx vue-tsc --noEmit`, `npm run build`. El script `pretest` de `package.json` instala dependencias si falta `node_modules`.
+- Los comandos anteriores están documentados en `README.md` y en los READMEs de cada parte. No inventes comandos: si cambian los manifiestos, actualiza esta sección y el README correspondiente. "Documentado" no equivale a "revalidado": el estado de la última validación de `platform` y `auth` está en `MEMORY.md`.
 
 ## Stack decidido (no cambiar sin actualizar la spec)
 
@@ -34,10 +54,12 @@
 - README separado en `backend/` y `frontend/` (configurar, ejecutar, probar).
 - Dockerfile para backend y frontend, docker-compose que orqueste todo, variables de entorno (`.env` está ignorado; versionar un `.env.example`).
 - Swagger/OpenAPI, documentación de estructura del frontend, tests unitarios + cobertura en ambos lados.
+- `platform` cubre la infraestructura, los READMEs iniciales, OpenAPI y las suites con cobertura; `auth` añade registro, login, JWT, RBAC, perfiles y administración de usuarios. El cierre formal de los entregables, la documentación final de estructura y los entregables de `events`, `sessions`, `registrations` y `delivery` se completan en sus dominios.
 
 ## Notas
 
-- La sección "Puesta en marcha" de `README.md` está marcada como pendiente: complétala con los comandos reales cuando existan `docker-compose.yml` y los READMEs de `backend/` y `frontend/`.
+- La "Puesta en marcha" de `README.md` ya documenta los comandos reales de Docker Compose, los requisitos locales y los endpoints del gateway. Mantenla sincronizada con `docker-compose.yml` y los READMEs de `backend/` y `frontend/`.
+- Estado de validación: `MEMORY.md` distingue las validaciones runtime registradas al cierre de cada dominio de las comprobaciones que no se reejecutan en tareas documentales. Esta sincronización documental no ejecutó tests, Docker, builds, migraciones ni MCP; el estado de `platform` y `auth` proviene de las validaciones históricas registradas.
 - `MEMORY.md` es la bitácora viva (decisiones tomadas/pendientes, progreso, tropiezos). Léelo al iniciar sesión y actualízalo al terminar cada tarea; no dupliques aquí lo que ya esté allí.
 - `.opencode/agents/` contiene los agentes del flujo SDD y se versiona; el resto de `.opencode/` sigue ignorado como configuración local.
 - `opencode.json` **sí se versiona**: es la configuración de agentes y servidores MCP, no contiene secretos y hace reproducible el entorno. **Nunca escribas tokens, claves ni contraseñas literales en `opencode.json`**: usa siempre `{env:VARIABLE}` (desde `.env`) o `{file:ruta}`. Si mueves la configuración a `.opencode/opencode.json` quedaría ignorada por Git; déjala en la raíz. Los servidores MCP lanzados con `npx` llevan versión fijada; actualízala de forma deliberada. `BROWSER_PATH` (ruta al binario de Chrome para `chrome-devtools-mcp`) es específico de cada máquina y solo vive en `.env`.

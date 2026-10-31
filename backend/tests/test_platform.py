@@ -26,7 +26,7 @@ def test_plat_ac_11_postgres_test_db_and_pg_trgm_enabled(
     version_num = db_session.exec(
         text("SELECT version_num FROM alembic_version")
     ).scalar_one_or_none()
-    assert version_num == "0001_enable_pg_trgm"
+    assert version_num == "0002_create_users"
     assert callable(db_truncate)
 
 

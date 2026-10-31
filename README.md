@@ -4,7 +4,7 @@ Plataforma web para que la empresa **Mis Eventos** administre sus eventos de pri
 
 Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarrollador full stack), desarrollada con **Spec-Driven Development (SDD)**: la especificación precede al código y cada regla de negocio se cubre con tests.
 
-> **Estado:** repositorio en fase de implementación incremental mediante SDD. El Dominio 0 (`platform`) está implementado y validado (infraestructura, esqueletos de backend y frontend y suites de pruebas); los dominios funcionales restantes (`auth`, `events`, `sessions`, `registrations` y `delivery`) siguen pendientes. El producto completo no está terminado.
+> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`) y 1 (`auth`) están implementados y validados; `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`. Los dominios `events`, `sessions`, `registrations` y `delivery` siguen pendientes. El producto completo no está terminado.
 
 ## Tabla de contenido
 
@@ -110,15 +110,15 @@ El trabajo avanza por dominios: cada uno se especifica, se aprueba, se implement
 | Orden | Dominio         | Spec                   | Código       |
 | :---: | --------------- | ---------------------- | ------------ |
 |   0   | `platform`      | Implementada (v1.0)    | Implementada |
-|   1   | `auth`          | Pendiente de redacción | Pendiente    |
+|   1   | `auth`          | Implementada (v1.0)    | Implementada |
 |   2   | `events`        | Pendiente de redacción | Pendiente    |
 |   3   | `sessions`      | Pendiente de redacción | Pendiente    |
 |   4   | `registrations` | Pendiente de redacción | Pendiente    |
 |   5   | `delivery`      | Pendiente de redacción | Pendiente    |
 
-El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); la especificación cerrada de `platform` en [specs/platform/spec.md](specs/platform/spec.md).
+El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform` y `auth` en [specs/platform/spec.md](specs/platform/spec.md) y [specs/auth/spec.md](specs/auth/spec.md).
 
-**Próximos pasos:** redactar y aprobar la spec del dominio `auth`. Su implementación no debe iniciarse hasta que esa spec esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
+**Próximos pasos:** iniciar la especificación del dominio `events`. Antes de escribir código deben existir `specs/events/spec.md`, `specs/events/plan.md` y `specs/events/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
 
 ## Puesta en marcha
 
@@ -149,11 +149,11 @@ La configuración se toma de un `.env` local creado a partir de `.env.example`.
 
 ### Backend local
 
-[backend/README.md](backend/README.md) contiene la documentación operativa del esqueleto actual: comandos de desarrollo, comandos de Alembic, ejecución de `pytest`, generación del reporte de cobertura, requisito de PostgreSQL en contenedor y prohibición de SQLite en las pruebas.
+[backend/README.md](backend/README.md) contiene la documentación operativa de la API: comandos de desarrollo, comandos de Alembic, ejecución de `pytest`, generación del reporte de cobertura, requisito de PostgreSQL en contenedor y prohibición de SQLite en las pruebas.
 
 ### Frontend local
 
-[frontend/README.md](frontend/README.md) contiene la documentación operativa del esqueleto actual: pruebas con Vitest, cobertura, verificación de tipos con `vue-tsc`, build de producción y estructura del frontend.
+[frontend/README.md](frontend/README.md) contiene la documentación operativa de la SPA: pruebas con Vitest, cobertura, verificación de tipos con `vue-tsc`, build de producción y estructura del frontend.
 
 ### Variables de entorno
 
@@ -162,7 +162,7 @@ La configuración se toma de un `.env` local creado a partir de `.env.example`.
 - Nunca deben incluirse secretos reales en el repositorio (R5.7 de la constitución).
 - Las variables de los servidores MCP de OpenCode (`CONTEXT7_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, `BROWSER_PATH` y `DEV_DATABASE_URI`) se conservan tal cual; sus valores reales solo viven en `.env` y no se documentan aquí.
 
-> Los READMEs de `backend/` y `frontend/` recogen la documentación operativa de sus esqueletos actuales. La documentación completa de entrega, la estructura final del frontend y los reportes de cobertura definitivos se cierran en el dominio `delivery`.
+> Los READMEs de `backend/` y `frontend/` recogen la documentación operativa de cada parte. La documentación completa de entrega, la estructura final del frontend y los reportes de cobertura definitivos se cierran en el dominio `delivery`.
 
 ## Entorno de desarrollo (OpenCode)
 
@@ -198,7 +198,20 @@ El Dominio 0 (`platform`) fue validado con estas comprobaciones:
 | Contrato de API       | OpenAPI verificado en `/api/openapi.json` y Swagger UI en `/api/docs`                       |
 | Infraestructura       | `docker compose up -d --build` con gateway Nginx, `web`, `api`, `db` y `redis` en ejecución |
 
-Los porcentajes corresponden a la última validación de `platform` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+El Dominio 1 (`auth`) se validó en su cierre con estas comprobaciones (resultados registrados en [MEMORY.md](MEMORY.md); no se reejecutaron en esta sincronización documental):
+
+| Control               | Herramienta / resultado                                                          |
+| --------------------- | -------------------------------------------------------------------------------- |
+| Tests de backend      | `pytest` contra PostgreSQL en contenedor: 43/43 (12 de `platform` + 31 de `auth`) |
+| Cobertura de backend  | 94 % con reporte XML (`backend/coverage.xml`)                                    |
+| Tests de frontend     | Vitest: 19/19 (6 de `platform` + 13 de `auth`)                                   |
+| Cobertura de frontend | 89.17 % de líneas                                                                |
+| Tipos del frontend    | `vue-tsc` sin errores                                                            |
+| Build de producción   | Vite minificado, con chunks por ruta diferida y sin source maps públicos         |
+| Contrato de API       | OpenAPI con `HTTPBearer` y sin `password_hash`                                   |
+| Migración             | `0002_create_users (head)` sobre PostgreSQL                                      |
+
+Los porcentajes corresponden a la última validación de `platform` y `auth` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
 
 | Control pendiente          | Dominio responsable                                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------------- |
