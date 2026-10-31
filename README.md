@@ -143,6 +143,8 @@ Los dos servidores MCP locales se ejecutan con `npx` y tienen **versión fijada*
 
 > **Regla:** nunca escribas tokens, claves o contraseñas literales en `opencode.json`. Usa siempre `{env:VARIABLE}` (desde `.env`) o `{file:ruta/al/secreto}`. `.env` está en `.gitignore`; `.env.example` solo lleva marcadores de posición.
 
+Las definiciones SDD de `.opencode/agents/` se versionan para que el flujo de trabajo sea reproducible. El resto de `.opencode/` permanece ignorado como configuración local. El coordinador dirige los pasos; el planner redacta y registra las specs; el implementer trabaja solo con una spec aprobada; el reviewer valida sin editar. Los permisos restringen las herramientas, pero las restricciones dentro de una parte de un archivo (por ejemplo, solo la columna de estado de `tasks.md`) también requieren cumplimiento del agente y revisión.
+
 ## Calidad
 
 | Control                      | Herramienta                                                                 |

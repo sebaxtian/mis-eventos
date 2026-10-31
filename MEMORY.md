@@ -4,7 +4,7 @@ Registro vivo del proyecto: decisiones, estado y tropiezos. Las reglas estables 
 
 **Regla de uso:** una entrada por sesión de trabajo. No duplicar lo que ya está en `AGENTS.md`. Podar lo obsoleto en lugar de acumular.
 
-**Última actualización:** 2026-10-30
+**Última actualización:** 2026-10-31
 
 ## 1. Estado del proyecto
 
@@ -43,6 +43,8 @@ Registro vivo del proyecto: decisiones, estado y tropiezos. Las reglas estables 
 | 2026-10-30 | Constitución v1.1.1 (PATCH), enmienda puntual autorizada por el usuario                                    | Referencias a la arquitectura v1.1 y R4.1 concreta UV y TypeScript ligero        |
 | 2026-10-30 | `opencode.json` versionado (no ignorado) y secretos solo vía `{env:...}`                                   | No contiene secretos, reproduce el entorno y es revisable; `.env` sigue ignorado |
 | 2026-10-30 | Versiones fijadas de los MCP `npx` (`chrome-devtools-mcp@1.12.0`, `@yawlabs/postgres-mcp@0.13.9`)          | Evita deriva de versiones y hace el entorno reproducible                         |
+| 2026-10-30 | Agentes SDD de `.opencode/agents/` versionados; resto de `.opencode/` ignorado                             | Reproducir el flujo multiagente sin compartir configuración local                |
+| 2026-10-30 | Permisos de agente en orden v2; implementer limita shell y rutas editables; reviewer shell con allowlist    | Reducir escalada de permisos y proteger specs, normas y configuración            |
 
 ## 3. Decisiones pendientes
 
@@ -95,3 +97,4 @@ Formato: `síntoma → causa → solución`. Vacío hasta que aparezca el primer
 - **2026-10-29** — Creado `README.md` raíz (alcance, stack, arquitectura, SDD, estado y enlaces internos). La sección "Puesta en marcha" queda pendiente hasta que exista `docker-compose.yml`. Sin commit todavía. Siguiente: redactar `specs/platform/`.
 - **2026-10-30** — Arquitectura reescrita a v1.1: UV, pytest contra PostgreSQL, TypeScript ligero, 401 ≠ 403 en el interceptor, diseño de imágenes WebP (§3.8) y desarrollo por dominios. Enmienda PATCH de la constitución a v1.1.1 (referencias y R4.1), `specs/README.md` v1.2 sin bloqueantes en `platform` ni `events`, `AGENTS.md` y `README.md` alineados. Siguiente: redactar `specs/platform/spec.md`, `plan.md` y `tasks.md`.
 - **2026-10-30** — Entorno OpenCode: `opencode.json` con 4 servidores MCP versionado (sin secretos, todo por `{env:...}`), versiones de los MCP `npx` fijadas (`chrome-devtools-mcp@1.12.0`, `@yawlabs/postgres-mcp@0.13.9`), `.env.example` con las 4 variables y sección "Entorno de desarrollo (OpenCode)" en `README.md` documentando `BROWSER_PATH`. Siguiente: redactar `specs/platform/`.
+- **2026-10-31** — Auditoría multiagente y pruebas de humo: `opencode debug agents` carga coordinator (primary) y planner/implementer/reviewer (subagent); los cuatro MCP figuran conectados. Planner pudo escribir en `specs/` y se le denegó `backend/`. Implementer pudo escribir en `backend/`; se le denegaron sondas en `specs/` y `.opencode/agents/`, además de `git push --dry-run` y `Set-Content`; `git status` fue permitido. Reviewer tuvo denegada la escritura de sonda y pudo ejecutar `git status`; no se confirmó dinámicamente su denegación de `git push` ni la disponibilidad de MCP por agente. Las llamadas de edición con texto inexistente no se consideran prueba de denegación. Todas las sondas creadas se verificaron y eliminaron. `.opencode/agents/` y la documentación de la arquitectura multiagente quedan listas para el hito base; siguiente: iniciar `specs/platform/` tras la revisión/aprobación del usuario.

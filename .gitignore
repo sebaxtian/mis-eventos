@@ -47,8 +47,9 @@ secrets/
 *.swp
 *.swo
 
-# OpenCode (configuración local del agente)
-.opencode/
+# OpenCode: se versionan solo las definiciones de agentes; el resto es local
+.opencode/*
+!.opencode/agents/
 
 # Docker y OS
 .DS_Store

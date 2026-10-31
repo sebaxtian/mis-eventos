@@ -39,6 +39,15 @@
 
 - La sección "Puesta en marcha" de `README.md` está marcada como pendiente: complétala con los comandos reales cuando existan `docker-compose.yml` y los READMEs de `backend/` y `frontend/`.
 - `MEMORY.md` es la bitácora viva (decisiones tomadas/pendientes, progreso, tropiezos). Léelo al iniciar sesión y actualízalo al terminar cada tarea; no dupliques aquí lo que ya esté allí.
-- `.opencode/` está en `.gitignore` (config local del agente, no se versiona).
+- `.opencode/agents/` contiene los agentes del flujo SDD y se versiona; el resto de `.opencode/` sigue ignorado como configuración local.
 - `opencode.json` **sí se versiona**: es la configuración de agentes y servidores MCP, no contiene secretos y hace reproducible el entorno. **Nunca escribas tokens, claves ni contraseñas literales en `opencode.json`**: usa siempre `{env:VARIABLE}` (desde `.env`) o `{file:ruta}`. Si mueves la configuración a `.opencode/opencode.json` quedaría ignorada por Git; déjala en la raíz. Los servidores MCP lanzados con `npx` llevan versión fijada; actualízala de forma deliberada. `BROWSER_PATH` (ruta al binario de Chrome para `chrome-devtools-mcp`) es específico de cada máquina y solo vive en `.env`.
 - No guardes nunca datos sensibles (claves, tokens, datos personales), tanto en `AGENTS.md` como en `MEMORY.md`.
+
+## Arquitectura multiagente (OpenCode)
+
+- `coordinator` orquesta los 7 pasos y es el único agente primario del flujo SDD; no edita ni ejecuta shell. Solo delega a `planner`, `implementer` y `reviewer`.
+- `planner` redacta specs/planes/tareas en `specs/` y mantiene `MEMORY.md`; nunca aprueba una spec sin aprobación explícita del usuario.
+- `implementer` solo comienza con una spec aprobada y trabaja con TDD. Sus permisos deniegan edición en `specs/**` excepto los `tasks.md` enumerados, `docs/**`, documentos normativos y configuración de agentes. Puede editar archivos de implementación y otros archivos permitidos por sus reglas; no debe modificar documentación/configuración fuera de la tarea asignada.
+- `reviewer` no edita; su shell pide confirmación salvo una lista acotada de comandos de inspección y verificación. Valida los criterios EARS y el Definition of Done.
+- Límites importantes: los permisos de edición de OpenCode son por archivo, no por fragmento; la regla de editar solo la columna de estado en `tasks.md` se refuerza con instrucciones y revisión. Shell no equivale a aislamiento de sistema operativo: los comandos no incluidos en listas permitidas deben pedir confirmación y no se aprueban sin revisar su alcance.
+- Los nombres de herramientas MCP deben coincidir con `opencode.json` (`context7-mcp`, `postgres-mcp`, `chrome-devtools-mcp`, `github-mcp`). `postgres-mcp` se configura con `ALLOW_WRITES=0`; no se delegan herramientas de GitHub a los agentes SDD.
