@@ -41,9 +41,7 @@ Base técnica transversal de la que dependen todos los demás dominios.
 - **Alcance Infra:** `docker-compose.yml` con Nginx, web, API, PostgreSQL y Redis; Nginx como único punto de entrada (`/` → web, `/api` → API); `.env.example` sin valores reales; migraciones Alembic al iniciar el contenedor de la API; healthcheck de la API.
 - **Alcance Backend:** proyecto gestionado con UV (`pyproject.toml` + `uv.lock`); esqueleto FastAPI con OpenAPI; formato único de error con `detail` en español, incluido el 422 de validación de FastAPI; convención de paginación común a todos los listados; fechas almacenadas en UTC; extensión `pg_trgm` habilitada; base de pruebas con pytest contra PostgreSQL (R3.6) y reporte de cobertura.
 - **Alcance Frontend:** proyecto Vue 3 con Vite y TypeScript ligero (`<script setup lang="ts">`, `vue-tsc` en el build); Vue Router con lazy loading de rutas; Pinia; cliente Axios con base relativa `/api`; Tailwind CSS; componentes base (`BaseInput`, `BaseButton`, spinner/skeleton, feedback de acciones); build de producción minificado; Vitest con cobertura.
-- **Preguntas abiertas:**
-  - Formato exacto de la paginación (`page`/`size` o `limit`/`offset`) y de la respuesta envolvente.
-  - Formato del cuerpo de error (solo `detail` o `detail` + código interno).
+- **Preguntas abiertas:** _(Resueltas en `specs/platform/spec.md` §8: paginación `page`/`size` 1-indexed con sobre `{ items, total, page, size, pages }`; cuerpo de error `{"detail": "..."}` en español más lista `errors` por campo en `422`; base de pruebas `mis_eventos_test` en PostgreSQL con `SAVEPOINT` + `TRUNCATE`; contrato `GET /api/health` con Redis prescindible)._
 
 ### 1.1. Dominio: Autenticación, RBAC y Perfiles (`specs/auth/`)
 
@@ -167,7 +165,7 @@ Cada requisito de `docs/prueba_tecnica_desarrollador_fullstack.md` tiene un domi
 
 | Orden | Dominio         | Estado                 | Versión | Última actualización |
 | :---: | --------------- | ---------------------- | ------- | -------------------- |
-|   0   | `platform`      | Pendiente de redacción | —       | —                    |
+|   0   | `platform`      | Implementada           | 1.0     | 2026-10-31           |
 |   1   | `auth`          | Pendiente de redacción | —       | —                    |
 |   2   | `events`        | Pendiente de redacción | —       | —                    |
 |   3   | `sessions`      | Pendiente de redacción | —       | —                    |

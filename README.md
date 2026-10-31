@@ -4,7 +4,7 @@ Plataforma web para que la empresa **Mis Eventos** administre sus eventos de pri
 
 Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarrollador full stack), desarrollada con **Spec-Driven Development (SDD)**: la especificación precede al código y cada regla de negocio se cubre con tests.
 
-> **Estado:** repositorio en fase de especificación. La base técnica y las specs de dominio están en curso; todavía no hay aplicación ejecutable.
+> **Estado:** repositorio en fase de implementación incremental mediante SDD. El Dominio 0 (`platform`) está implementado y validado (infraestructura, esqueletos de backend y frontend y suites de pruebas); los dominios funcionales restantes (`auth`, `events`, `sessions`, `registrations` y `delivery`) siguen pendientes. El producto completo no está terminado.
 
 ## Tabla de contenido
 
@@ -75,13 +75,14 @@ Detalle completo en [docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Event
 
 ```
 .
-├── backend/      API FastAPI (dominios platform → registrations)
-├── frontend/     SPA Vue 3
-├── infra/        Nginx y configuración de Docker Compose
-├── specs/        Índice, plantillas y una carpeta por dominio
-├── docs/         Requisitos, arquitectura y constitución
-├── AGENTS.md     Contexto y reglas para agentes de OpenCode
-├── MEMORY.md     Bitácora de decisiones y progreso
+├── backend/            API FastAPI (dominios platform → registrations)
+├── frontend/           SPA Vue 3
+├── infra/              Configuración de Nginx y de PostgreSQL para los contenedores
+├── specs/              Índice, plantillas y una carpeta por dominio
+├── docs/               Requisitos, arquitectura y constitución
+├── docker-compose.yml  Orquestación de gateway, web, api, db, redis y volumen media
+├── AGENTS.md           Contexto y reglas para agentes de OpenCode
+├── MEMORY.md           Bitácora de decisiones y progreso
 └── README.md
 ```
 
@@ -104,27 +105,64 @@ La regla de oro: **el código se subordina a la especificación**. Si el código
 
 ## Estado del proyecto
 
-| Orden | Dominio         | Spec      | Código    |
-| :---: | --------------- | --------- | --------- |
-|   0   | `platform`      | Pendiente | Pendiente |
-|   1   | `auth`          | Pendiente | Pendiente |
-|   2   | `events`        | Pendiente | Pendiente |
-|   3   | `sessions`      | Pendiente | Pendiente |
-|   4   | `registrations` | Pendiente | Pendiente |
-|   5   | `delivery`      | Pendiente | Pendiente |
+El trabajo avanza por dominios: cada uno se especifica, se aprueba, se implementa con TDD y se valida antes de iniciar el siguiente.
 
-**Próximos pasos:** redactar la spec de `platform` (las decisiones que la bloqueaban quedaron resueltas en la arquitectura v1.1).
+| Orden | Dominio         | Spec                   | Código       |
+| :---: | --------------- | ---------------------- | ------------ |
+|   0   | `platform`      | Implementada (v1.0)    | Implementada |
+|   1   | `auth`          | Pendiente de redacción | Pendiente    |
+|   2   | `events`        | Pendiente de redacción | Pendiente    |
+|   3   | `sessions`      | Pendiente de redacción | Pendiente    |
+|   4   | `registrations` | Pendiente de redacción | Pendiente    |
+|   5   | `delivery`      | Pendiente de redacción | Pendiente    |
+
+El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); la especificación cerrada de `platform` en [specs/platform/spec.md](specs/platform/spec.md).
+
+**Próximos pasos:** redactar y aprobar la spec del dominio `auth`. Su implementación no debe iniciarse hasta que esa spec esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
 
 ## Puesta en marcha
 
-> Aún no disponible: la infraestructura y los manifiestos se crean en el dominio `platform`.
+### Requisitos
 
-Cuando estén listos, el punto de entrada será Docker Compose desde la raíz del repositorio. La configuración se tomará de un `.env` local a partir de `.env.example`; no se versionan secretos.
+- [Docker](https://www.docker.com/) y Docker Compose.
+- [UV](https://docs.astral.sh/uv/) para el backend (dependencias, Alembic y `pytest`).
+- Node.js 22+ y npm 10+ para trabajar en el frontend en local (la imagen de Docker ya incorpora su propia etapa Node).
 
-La instalación, ejecución y pruebas de cada parte se documentarán en:
+### Ejecución completa con Docker Compose
 
-- `backend/README.md`
-- `frontend/README.md`
+Desde la raíz del repositorio:
+
+```bash
+docker compose up -d --build
+```
+
+El gateway Nginx es el único punto de entrada y queda disponible en `http://localhost:8080`:
+
+| Ruta                                     | Contenido                                 |
+| ---------------------------------------- | ----------------------------------------- |
+| `http://localhost:8080/`                 | SPA Vue 3 servida por el contenedor `web` |
+| `http://localhost:8080/api/health`       | Estado de la API, PostgreSQL y Redis      |
+| `http://localhost:8080/api/docs`         | Swagger UI del contrato OpenAPI           |
+| `http://localhost:8080/api/openapi.json` | Documento OpenAPI generado por FastAPI    |
+
+La configuración se toma de un `.env` local creado a partir de `.env.example`.
+
+### Backend local
+
+[backend/README.md](backend/README.md) contiene la documentación operativa del esqueleto actual: comandos de desarrollo, comandos de Alembic, ejecución de `pytest`, generación del reporte de cobertura, requisito de PostgreSQL en contenedor y prohibición de SQLite en las pruebas.
+
+### Frontend local
+
+[frontend/README.md](frontend/README.md) contiene la documentación operativa del esqueleto actual: pruebas con Vitest, cobertura, verificación de tipos con `vue-tsc`, build de producción y estructura del frontend.
+
+### Variables de entorno
+
+- `.env.example` versiona los marcadores de configuración (infraestructura, base de datos, Redis y aplicación) con valores de ejemplo, sin secretos reales.
+- `.env` es local, está ignorado por Git y no se versiona.
+- Nunca deben incluirse secretos reales en el repositorio (R5.7 de la constitución).
+- Las variables de los servidores MCP de OpenCode (`CONTEXT7_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, `BROWSER_PATH` y `DEV_DATABASE_URI`) se conservan tal cual; sus valores reales solo viven en `.env` y no se documentan aquí.
+
+> Los READMEs de `backend/` y `frontend/` recogen la documentación operativa de sus esqueletos actuales. La documentación completa de entrega, la estructura final del frontend y los reportes de cobertura definitivos se cierran en el dominio `delivery`.
 
 ## Entorno de desarrollo (OpenCode)
 
@@ -147,12 +185,24 @@ Las definiciones SDD de `.opencode/agents/` se versionan para que el flujo de tr
 
 ## Calidad
 
-| Control                      | Herramienta                                                                 |
-| ---------------------------- | --------------------------------------------------------------------------- |
-| Tests de backend y cobertura | pytest + reporte XML                                                        |
-| Tests de frontend            | Vitest                                                                      |
-| Contrato de API              | OpenAPI (Swagger en `/api/docs`)                                            |
-| Reglas de negocio críticas   | Tests de capacidad concurrente y solapamiento de sesiones contra PostgreSQL |
+El Dominio 0 (`platform`) fue validado con estas comprobaciones:
+
+| Control               | Herramienta / resultado                                                                     |
+| --------------------- | ------------------------------------------------------------------------------------------- |
+| Tests de backend      | `pytest` contra PostgreSQL en contenedor (`mis_eventos_test`), sin SQLite                   |
+| Cobertura de backend  | 85 % con reporte XML (`backend/coverage.xml`)                                               |
+| Tests de frontend     | Vitest (6 pruebas en 3 archivos)                                                            |
+| Cobertura de frontend | 88.75 % de líneas                                                                           |
+| Tipos del frontend    | `vue-tsc` sin errores                                                                       |
+| Build de producción   | Vite minificado, con chunks por ruta diferida y sin source maps públicos                    |
+| Contrato de API       | OpenAPI verificado en `/api/openapi.json` y Swagger UI en `/api/docs`                       |
+| Infraestructura       | `docker compose up -d --build` con gateway Nginx, `web`, `api`, `db` y `redis` en ejecución |
+
+Los porcentajes corresponden a la última validación de `platform` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+
+| Control pendiente          | Dominio responsable                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------- |
+| Reglas de negocio críticas | Tests de capacidad concurrente y solapamiento de sesiones contra PostgreSQL en sus dominios |
 
 ## Licencia
 
