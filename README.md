@@ -15,6 +15,7 @@ Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarro
 - [Metodología SDD](#metodología-sdd)
 - [Estado del proyecto](#estado-del-proyecto)
 - [Puesta en marcha](#puesta-en-marcha)
+- [Entorno de desarrollo (OpenCode)](#entorno-de-desarrollo-opencode)
 - [Calidad](#calidad)
 - [Licencia](#licencia)
 
@@ -46,13 +47,14 @@ Los bonus de la prueba (roles, gestión de perfiles, imágenes WebP, lazy loadin
 
 ## Stack
 
-| Capa            | Tecnología                                                          |
-| --------------- | ------------------------------------------------------------------- |
-| Backend         | Python 3.14, FastAPI, SQLModel/SQLAlchemy, Alembic, PostgreSQL, JWT |
-| Frontend        | Vue 3 (Composition API), Vue Router, Pinia, Axios, Tailwind CSS     |
-| Caché           | Redis (solo lecturas, prescindible)                                 |
-| Infraestructura | Docker, Docker Compose, Nginx                                       |
-| Pruebas         | pytest + cobertura (backend), Vitest (frontend)                     |
+| Capa            | Tecnología                                                                                |
+| --------------- | ----------------------------------------------------------------------------------------- |
+| Backend         | Python 3.14, UV, FastAPI, SQLModel/SQLAlchemy, Alembic, PostgreSQL, JWT                   |
+| Frontend        | Vue 3 (Composition API) + TypeScript ligero, Vite, Vue Router, Pinia, Axios, Tailwind CSS |
+| Caché           | Redis (solo lecturas, prescindible)                                                       |
+| Imágenes        | Conversión a WebP en el backend (Pillow), servidas por Nginx en `/api/media/`             |
+| Infraestructura | Docker, Docker Compose, Nginx                                                             |
+| Pruebas         | pytest + cobertura contra PostgreSQL (backend), Vitest (frontend)                         |
 
 ## Arquitectura
 
@@ -111,7 +113,7 @@ La regla de oro: **el código se subordina a la especificación**. Si el código
 |   4   | `registrations` | Pendiente | Pendiente |
 |   5   | `delivery`      | Pendiente | Pendiente |
 
-**Próximos pasos:** cerrar las decisiones que bloquean `platform` (gestor de dependencias, base de datos de pruebas y tipado del frontend) y redactar su spec.
+**Próximos pasos:** redactar la spec de `platform` (las decisiones que la bloqueaban quedaron resueltas en la arquitectura v1.1).
 
 ## Puesta en marcha
 
@@ -123,6 +125,23 @@ La instalación, ejecución y pruebas de cada parte se documentarán en:
 
 - `backend/README.md`
 - `frontend/README.md`
+
+## Entorno de desarrollo (OpenCode)
+
+El repositorio está desarrollado con [OpenCode](https://opencode.ai) bajo SDD. La configuración de agentes y servidores MCP vive en `opencode.json`, que **sí se versiona**: no contiene secretos y permite reproducir el mismo entorno en cualquier máquina. OpenCode lee el `.env` del proyecto y resuelve las variables con `{env:...}`.
+
+| Variable de `.env`             | Uso                                                                     |
+| ------------------------------ | ----------------------------------------------------------------------- |
+| `CONTEXT7_API_KEY`             | Servidor MCP de documentación (Context7)                                |
+| `GITHUB_PERSONAL_ACCESS_TOKEN` | Servidor MCP de GitHub                                                  |
+| `DEV_DATABASE_URI`             | Servidor MCP de PostgreSQL en modo solo lectura (`ALLOW_WRITES=0`)      |
+| `BROWSER_PATH`                 | Ruta absoluta al ejecutable de Chrome/Chromium/Brave (MCP de navegador) |
+
+`BROWSER_PATH` es específico de cada máquina: no se versiona y no tiene valor por defecto. En Windows suele ser algo como `C:/Program Files/BraveSoftware/Brave-Browser/Application/brave.exe`; en Linux/macOS, la ruta del binario de Chrome o Chromium. Si no lo defines, el servidor `chrome-devtools-mcp` no arranca y el resto de OpenCode sigue funcionando con normalidad.
+
+Los dos servidores MCP locales se ejecutan con `npx` y tienen **versión fijada** (`chrome-devtools-mcp@1.12.0`, `@yawlabs/postgres-mcp@0.13.9`) para que el entorno sea reproducible. Para actualizarlos, cambia la versión en `opencode.json` de forma deliberada.
+
+> **Regla:** nunca escribas tokens, claves o contraseñas literales en `opencode.json`. Usa siempre `{env:VARIABLE}` (desde `.env`) o `{file:ruta/al/secreto}`. `.env` está en `.gitignore`; `.env.example` solo lleva marcadores de posición.
 
 ## Calidad
 

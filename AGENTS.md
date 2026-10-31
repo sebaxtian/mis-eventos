@@ -5,7 +5,7 @@
 - Repo en fase de especificación: `README.md` en la raíz, `specs/` con índice y plantillas, y `backend/`, `frontend/` e `infra/` solo con `.gitkeep` (sin specs de dominio redactadas todavía). No hay manifests, scripts, CI ni comandos verificables aún. No inventes comandos; cuando se agreguen `pyproject.toml`, `package.json` o `docker-compose.yml`, actualiza este archivo con los comandos reales.
 - Fuentes de verdad actuales (en español):
   - `docs/prueba_tecnica_desarrollador_fullstack.md` — requisitos de la prueba técnica (Tusdatos.co, plazo 5 días).
-  - `docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md` — arquitectura v1.0 elegida.
+  - `docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md` — arquitectura v1.1 (alineada con la constitución v1.1.1).
 
 ## Metodología
 
@@ -18,16 +18,16 @@
 
 ## Stack decidido (no cambiar sin actualizar la spec)
 
-- Backend (`backend/`): Python **3.14** (imagen `python:3.14-slim`), FastAPI + SQLModel/SQLAlchemy, PostgreSQL, Alembic, gestor de dependencias UV o Poetry, pytest con reporte de cobertura XML. JWT + RBAC con roles Admin / Organizador / Asistente.
-- Frontend (`frontend/`): Vue 3 (Composition API, `<script setup>`), Vue Router con guards, Pinia (`useAuthStore`, `useEventStore`), Axios con interceptor 401/403 → limpiar store y redirigir a login, Tailwind CSS, Vitest.
-- Infra (`infra/` + `docker-compose.yml`): Nginx como gateway único (`/` → web, `/api` → backend; evita CORS), Postgres con volumen, Redis para cachear listados paginados. Las migraciones Alembic deben ejecutarse al iniciar el contenedor de la API.
+- Backend (`backend/`): Python **3.14** (imagen `python:3.14-slim`), FastAPI + SQLModel/SQLAlchemy, PostgreSQL, Alembic, gestor de dependencias **UV** (`pyproject.toml` + `uv.lock` versionado; no Poetry), pytest **contra PostgreSQL en contenedor** con reporte de cobertura XML. JWT + RBAC con roles `ADMIN` / `ORGANIZER` / `ATTENDEE`. Imágenes de eventos convertidas a WebP con Pillow en el backend (3 variantes por ancho).
+- Frontend (`frontend/`): Vue 3 (Composition API, `<script setup lang="ts">`) con **TypeScript ligero**, Vite, Vue Router con rutas lazy y guards (solo UX), Pinia (`useAuthStore`, `useEventStore`), Axios con `baseURL` `/api` e interceptor: **401 → limpiar sesión y redirigir a login; 403 → mantener sesión y mostrar aviso** (R5.6), Tailwind CSS, Vitest.
+- Infra (`infra/` + `docker-compose.yml`): Nginx como gateway único (`/` → web, `/api` → backend; evita CORS; `/api/media/` servido por Nginx desde el volumen `media` en solo lectura), Postgres con volumen, Redis prescindible para cachear listados paginados. Las migraciones Alembic deben ejecutarse al iniciar el contenedor de la API.
 
 ## Reglas de negocio que es fácil romper
 
 - Inscripción debe validar capacidad de forma atómica (`registrations < capacity`) — usar bloqueo/transacción, no check-then-insert ingenuo.
 - Sesiones de un mismo evento no pueden solaparse en horario.
-- Estados de evento: Borrador, Publicado, Cancelado.
-- Búsqueda por nombre parcial usa índices trigrama (`pg_trgm`, solo PostgreSQL): tests con SQLite en memoria no cubrirán eso; preferir Postgres en contenedor para tests de búsqueda.
+- Estados de evento: `DRAFT`, `PUBLISHED`, `CANCELLED` (se traducen solo en la UI).
+- Búsqueda por nombre parcial usa índices trigrama (`pg_trgm`, solo PostgreSQL). Nunca usar SQLite en tests: toda la suite de pytest corre contra PostgreSQL en contenedor (R3.6).
 
 ## Entregables obligatorios (de la prueba)
 
@@ -40,4 +40,5 @@
 - La sección "Puesta en marcha" de `README.md` está marcada como pendiente: complétala con los comandos reales cuando existan `docker-compose.yml` y los READMEs de `backend/` y `frontend/`.
 - `MEMORY.md` es la bitácora viva (decisiones tomadas/pendientes, progreso, tropiezos). Léelo al iniciar sesión y actualízalo al terminar cada tarea; no dupliques aquí lo que ya esté allí.
 - `.opencode/` está en `.gitignore` (config local del agente, no se versiona).
+- `opencode.json` **sí se versiona**: es la configuración de agentes y servidores MCP, no contiene secretos y hace reproducible el entorno. **Nunca escribas tokens, claves ni contraseñas literales en `opencode.json`**: usa siempre `{env:VARIABLE}` (desde `.env`) o `{file:ruta}`. Si mueves la configuración a `.opencode/opencode.json` quedaría ignorada por Git; déjala en la raíz. Los servidores MCP lanzados con `npx` llevan versión fijada; actualízala de forma deliberada. `BROWSER_PATH` (ruta al binario de Chrome para `chrome-devtools-mcp`) es específico de cada máquina y solo vive en `.env`.
 - No guardes nunca datos sensibles (claves, tokens, datos personales), tanto en `AGENTS.md` como en `MEMORY.md`.

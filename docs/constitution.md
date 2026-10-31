@@ -1,7 +1,7 @@
 # Constitución del Proyecto — Mis Eventos
 
-**Versión:** 1.1
-**Fecha:** 29 de octubre de 2026
+**Versión:** 1.1.1
+**Fecha:** 30 de octubre de 2026
 **Metodología:** Spec-Driven Development (SDD)
 **Ámbito:** Todo el repositorio (`backend/`, `frontend/`, `infra/`, `specs/`, `docs/`)
 
@@ -11,11 +11,11 @@ Este documento fija los principios **innegociables** del proyecto. Ninguna spec,
 
 1. **Requisitos de la prueba técnica** (`docs/prueba_tecnica_desarrollador_fullstack.md`): alcance mínimo externo. Incluye los bonus, que en este proyecto son obligatorios. No se recorta.
 2. **Esta constitución**: cómo se construye. Innegociable.
-3. **Arquitectura v1.0** (`docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md`): marco técnico global.
+3. **Arquitectura v1.1** (`docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md`): marco técnico global.
 4. **Especificaciones** (`specs/`): comportamiento de cada funcionalidad. El índice, el orden de dominios y su estado están en `specs/README.md`.
 5. **Código y tests**: implementación. Nunca son fuente de verdad.
 
-Ante un conflicto prevalece el documento de mayor rango y se corrige el inferior. Esta constitución corrige la arquitectura v1.0 en el manejo del código 403 (R5.6).
+Ante un conflicto prevalece el documento de mayor rango y se corrige el inferior. La corrección del manejo del código 403 que esta constitución hizo sobre la arquitectura v1.0 (R5.6) ya está incorporada en la arquitectura v1.1.
 
 ---
 
@@ -84,11 +84,11 @@ Primero la prueba en rojo; después el código que la pone en verde.
 
 ## Principio 4 — Simplicidad del Stack
 
-Solo se usa lo definido en la arquitectura v1.0.
+Solo se usa lo definido en la arquitectura v1.1.
 
 - **R4.1** Componentes cerrados:
-  - Backend: Python 3.14 (`python:3.14-slim`), FastAPI + Uvicorn, SQLModel/SQLAlchemy, PostgreSQL, Alembic, JWT, UV o Poetry, pytest.
-  - Frontend: Vue 3 (Composition API, `<script setup>`), Vue Router, Pinia, Axios, Tailwind CSS, Vitest.
+  - Backend: Python 3.14 (`python:3.14-slim`), FastAPI + Uvicorn, SQLModel/SQLAlchemy, PostgreSQL, Alembic, JWT, UV, pytest.
+  - Frontend: Vue 3 (Composition API, `<script setup>`) con TypeScript ligero, Vue Router, Pinia, Axios, Tailwind CSS, Vitest.
   - Infra: Docker, Docker Compose, Nginx, PostgreSQL, Redis.
 - **R4.2** Se permiten librerías de soporte que implementen un componente ya decidido (herramienta de build, driver de base de datos, cliente Redis, librería de JWT o de hashing, utilidades de test y cobertura), siempre que sean de uso extendido y se registren en `MEMORY.md` con su motivo.
 - **R4.3** Prohibido sin enmienda previa: componentes nuevos de arquitectura (otra base de datos, colas o workers, WebSockets, GraphQL, otro gestor de estado, librerías de componentes UI, ORMs alternativos).
@@ -111,7 +111,7 @@ La seguridad se implementa en el backend y se demuestra con tests.
   - Asistente: lectura de eventos e inscripción.
 - **R5.4** Inscripción atómica: la comprobación de capacidad (del evento y, si aplica, de la sesión) y la inserción ocurren en la misma transacción con bloqueo. Una restricción de unicidad impide inscripciones duplicadas. Prohibido comprobar y después insertar sin protección.
 - **R5.5** Toda entrada se valida en el backend con schemas Pydantic. Las respuestas usan schemas de salida explícitos que nunca incluyen `password_hash`.
-- **R5.6** Semántica estricta: 401 (token ausente, inválido o expirado) → el frontend limpia la sesión y redirige al login. 403 (sin permiso) → el frontend mantiene la sesión y muestra un aviso. _Corrige la arquitectura v1.0 §3._
+- **R5.6** Semántica estricta: 401 (token ausente, inválido o expirado) → el frontend limpia la sesión y redirige al login. 403 (sin permiso) → el frontend mantiene la sesión y muestra un aviso. _Corrigió la arquitectura v1.0 §3; incorporado en la arquitectura v1.1 §4.4._
 - **R5.7** Secretos solo en variables de entorno. `.env` no se versiona; se versiona `.env.example` sin valores reales. Ningún secreto ni dato personal en el código, las specs, `AGENTS.md`, `MEMORY.md` o este archivo.
 - **R5.8** Privacidad: se recogen solo los datos necesarios. Un usuario solo ve sus propias inscripciones; solo el Admin ve perfiles ajenos. El login responde con un mensaje genérico que no revela si el email existe. Los errores no exponen trazas, SQL ni nombres internos.
 - **R5.9** Como el token es accesible desde JavaScript, está prohibido `v-html` con contenido proveniente de usuarios.
@@ -171,3 +171,4 @@ Cada incremento recorre estas etapas en orden:
 | ------- | ---------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | 1.0     | 2026-10-29 | —     | Ratificación inicial: jerarquía normativa, 6 principios, alcance obligatorio con bonus, flujo y gobernanza.                                                                                                                                                         |
 | 1.1     | 2026-10-29 | MINOR | R1.2 adopta notación EARS para los criterios de aceptación; nuevas R1.7 (tres artefactos por dominio), R1.8 (ciclo de vida y aprobación de specs) y R1.9 (trazabilidad por IDs). La jerarquía apunta a `specs/README.md` y el paso 1 del flujo exige spec aprobada. |
+| 1.1.1   | 2026-10-30 | PATCH | Alineación con la arquitectura v1.1: las referencias pasan de v1.0 a v1.1 (jerarquía, Principio 4, R5.6) y R4.1 concreta opciones ya previstas (UV en lugar de "UV o Poetry"; TypeScript ligero en el frontend). Enmienda puntual autorizada por el responsable del proyecto; no añade ni elimina principios ni reglas. |

@@ -1,7 +1,7 @@
 # Plan de Especificaciones Funcionales (SDD) - Mis Eventos
 
-**Versión:** 1.1
-**Fecha:** 29 de octubre de 2026
+**Versión:** 1.2
+**Fecha:** 30 de octubre de 2026
 **Estado:** Vigente
 **Metodología:** Spec-Driven Development (SDD)
 
@@ -39,8 +39,8 @@ Las "Preguntas abiertas" de cada dominio se resuelven al redactar su `spec.md`; 
 Base técnica transversal de la que dependen todos los demás dominios.
 
 - **Alcance Infra:** `docker-compose.yml` con Nginx, web, API, PostgreSQL y Redis; Nginx como único punto de entrada (`/` → web, `/api` → API); `.env.example` sin valores reales; migraciones Alembic al iniciar el contenedor de la API; healthcheck de la API.
-- **Alcance Backend:** esqueleto FastAPI con OpenAPI; formato único de error con `detail` en español, incluido el 422 de validación de FastAPI; convención de paginación común a todos los listados; fechas almacenadas en UTC; extensión `pg_trgm` habilitada; base de pruebas con pytest contra PostgreSQL (R3.6) y reporte de cobertura.
-- **Alcance Frontend:** proyecto Vue 3 con Vite; Vue Router con lazy loading de rutas; Pinia; cliente Axios con base relativa `/api`; Tailwind CSS; componentes base (`BaseInput`, `BaseButton`, spinner/skeleton, feedback de acciones); build de producción minificado; Vitest con cobertura.
+- **Alcance Backend:** proyecto gestionado con UV (`pyproject.toml` + `uv.lock`); esqueleto FastAPI con OpenAPI; formato único de error con `detail` en español, incluido el 422 de validación de FastAPI; convención de paginación común a todos los listados; fechas almacenadas en UTC; extensión `pg_trgm` habilitada; base de pruebas con pytest contra PostgreSQL (R3.6) y reporte de cobertura.
+- **Alcance Frontend:** proyecto Vue 3 con Vite y TypeScript ligero (`<script setup lang="ts">`, `vue-tsc` en el build); Vue Router con lazy loading de rutas; Pinia; cliente Axios con base relativa `/api`; Tailwind CSS; componentes base (`BaseInput`, `BaseButton`, spinner/skeleton, feedback de acciones); build de producción minificado; Vitest con cobertura.
 - **Preguntas abiertas:**
   - Formato exacto de la paginación (`page`/`size` o `limit`/`offset`) y de la respuesta envolvente.
   - Formato del cuerpo de error (solo `detail` o `detail` + código interno).
@@ -63,7 +63,7 @@ Determina la identidad y los límites de acceso de cada actor.
 
 Núcleo operativo para los organizadores y escaparate para los asistentes.
 
-- **Alcance Backend:** CRUD de `Event` y máquina de estados `DRAFT` / `PUBLISHED` / `CANCELLED`.
+- **Alcance Backend:** CRUD de `Event` y máquina de estados `DRAFT` / `PUBLISHED` / `CANCELLED`; subida de imagen con conversión a WebP (Pillow) y volumen `media` servido por Nginx en `/api/media/` (arquitectura v1.1 §3.8).
 - **Reglas Críticas:** búsqueda por nombre o parte del nombre acelerada con índice trigrama (`pg_trgm`); paginación según la convención de `platform`; caché de lectura en Redis, prescindible e invalidada en las escrituras (R4.4); el listado expone los cupos disponibles para que el frontend no los calcule (R2.5).
 - **Alcance Frontend:** `useEventStore`; listado paginado y responsivo; `EventCard`; detalle de evento; formulario de creación/edición (`EventForm`); estados de carga; imágenes optimizadas (WebP, tamaños por dispositivo); lazy loading de los componentes pesados del dominio.
 - **Preguntas abiertas:**
@@ -73,7 +73,7 @@ Núcleo operativo para los organizadores y escaparate para los asistentes.
   - Si el listado es público o requiere autenticación.
   - Qué ocurre al reducir la capacidad por debajo de los inscritos (propuesta: rechazar) y al eliminar un evento con inscripciones (borrado físico frente a forzar `CANCELLED`).
   - El evento solo tiene `date`: definir fin o duración del evento y la regla de contención de sus sesiones.
-  - Diseño de imágenes: campo en `Event`, almacenamiento, generación de tamaños y entrega en WebP (decisión bloqueante en `MEMORY.md`).
+  - Contrato del endpoint de imágenes (ruta, códigos de error, tamaño máximo). El diseño base ya está fijado en la arquitectura v1.1 §3.8: conversión con Pillow a 3 variantes WebP, volumen `media`, `Event.image_key` y entrega por Nginx en `/api/media/`.
 
 ### 1.3. Dominio: Programación de Sesiones (`specs/sessions/`)
 
@@ -120,9 +120,9 @@ Principios transversales que aplican a **todas** las specs: R2 (aislamiento), R3
 
 | Orden | Directorio             | Dominio                        | Dependencias                 | Principios específicos                                                                        | Bonus cubiertos                                     | Decisiones bloqueantes                                                   |
 | :---: | :--------------------- | :----------------------------- | :--------------------------- | :-------------------------------------------------------------------------------------------- | :-------------------------------------------------- | :----------------------------------------------------------------------- |
-| **0** | `specs/platform/`      | Plataforma                     | _(Ninguna)_                  | R2.1, R2.2, R3.6, R3.9, R5.7, R6 (422 en español)                                             | Minificación, lazy loading de rutas                 | Gestor de dependencias (UV/Poetry), BD de tests, TypeScript o JavaScript |
+| **0** | `specs/platform/`      | Plataforma                     | _(Ninguna)_                  | R2.1, R2.2, R3.6, R3.9, R5.7, R6 (422 en español)                                             | Minificación, lazy loading de rutas                 | — (resueltas en la arquitectura v1.1: UV, PostgreSQL en tests, TypeScript ligero) |
 | **1** | `specs/auth/`          | Autenticación, RBAC y Perfiles | `platform`                   | R5.1, R5.2, R5.3, R5.6, R5.8, R5.9                                                            | Roles, permisos por rol, gestión de perfiles        | Estrategia de JWT (token único o access + refresh)                       |
-| **2** | `specs/events/`        | Eventos y Catálogo             | `auth`                       | R3.6 (`pg_trgm`), R4.4 (caché Redis), R2.5 (cupos desde la API)                               | Imágenes WebP, lazy loading de componentes, caching | Diseño de imágenes de eventos                                            |
+| **2** | `specs/events/`        | Eventos y Catálogo             | `auth`                       | R3.6 (`pg_trgm`), R4.4 (caché Redis), R2.5 (cupos desde la API)                               | Imágenes WebP, lazy loading de componentes, caching | — (diseño de imágenes resuelto en la arquitectura v1.1 §3.8)             |
 | **3** | `specs/sessions/`      | Programación de Sesiones       | `events`                     | R3.4 (solapamiento), R5.3 (propiedad del evento)                                              | —                                                   | —                                                                        |
 | **4** | `specs/registrations/` | Inscripciones y Capacidad      | `auth`, `events`, `sessions` | R3.4 (límites y concurrencia), R3.6 (bloqueos en PostgreSQL), R5.4, R5.8, R4.4 (invalidación) | —                                                   | —                                                                        |
 | **5** | `specs/delivery/`      | Entrega                        | Todos                        | R3.9 (cobertura)                                                                              | —                                                   | —                                                                        |
@@ -153,7 +153,7 @@ Cada requisito de `docs/prueba_tecnica_desarrollador_fullstack.md` tiene un domi
 | Bonus: minificación                                                             | `platform`                                             |
 | Bonus: caching con Redis                                                        | `events`, `registrations` (invalidación)               |
 | UI/UX: diseño usable, responsivo, loading states, feedback visual               | `platform` (base), cada dominio                        |
-| Python 3.14, FastAPI, SQLModel, PostgreSQL, UV/Poetry, Alembic, pytest, OpenAPI | `platform`                                             |
+| Python 3.14, FastAPI, SQLModel, PostgreSQL, UV, Alembic, pytest, OpenAPI        | `platform`                                             |
 | Docker, Docker Compose, variables de entorno                                    | `platform`                                             |
 | READMEs, documentación del frontend, cobertura                                  | `delivery`                                             |
 
