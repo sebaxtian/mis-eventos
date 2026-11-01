@@ -4,11 +4,25 @@ import { createPinia, setActivePinia } from 'pinia'
 import type { AuthUser } from '@/types/api'
 import { createAppRouter } from '@/router'
 import apiClient from '@/services/api'
+import * as registrationsService from '@/services/registrations'
 import { useAuthStore } from '@/stores/auth'
 import { useNotificationStore } from '@/stores/notification'
 import LoginView from '@/views/LoginView.vue'
 import ProfileView from '@/views/ProfileView.vue'
 import RegisterView from '@/views/RegisterView.vue'
+
+vi.mock('@/services/registrations', () => ({
+  fetchMyRegistrationsApi: vi.fn(),
+  fetchEventRegistrationsApi: vi.fn(),
+  fetchRegistrationByIdApi: vi.fn(),
+  registerForEventApi: vi.fn(),
+  registerForSessionApi: vi.fn(),
+  cancelRegistrationApi: vi.fn(),
+}))
+
+const mockedFetchMyRegistrations = vi.mocked(
+  registrationsService.fetchMyRegistrationsApi,
+)
 
 const registeredUser: AuthUser = {
   id: 1,
@@ -25,6 +39,13 @@ describe('Auth views (Register, Login, Profile)', () => {
     setActivePinia(createPinia())
     window.sessionStorage.clear()
     vi.restoreAllMocks()
+    mockedFetchMyRegistrations.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 10,
+      pages: 0,
+    })
   })
 
   it('AUTH-AC-01 register view submits full_name, email and password and redirects to login', async () => {

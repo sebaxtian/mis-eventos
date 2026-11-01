@@ -89,14 +89,16 @@ def _invalidate_event_cache(cache: CacheClient) -> None:
 
 
 def get_registered_count(session: Session, event_id: int) -> int:
-    """Return the number of registrations for an event.
+    """Return the number of active registrations for an event.
 
-    The ``registrations`` table belongs to a later domain; until it exists the
-    count is always zero. The function is intentionally module-level so tests
-    can monkeypatch it to simulate events with attendees.
+    Counts rows with ``session_id IS NULL`` so a person occupies exactly one
+    event seat. The function is intentionally module-level so tests can
+    monkeypatch it to simulate events with attendees.
     """
 
-    return 0
+    from app.registrations.service import count_active_event_registrations
+
+    return count_active_event_registrations(session, event_id)
 
 
 def to_event_read(event: Event, registered_count: int) -> EventRead:

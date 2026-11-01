@@ -30,12 +30,14 @@ frontend/
     │   ├── api.ts
     │   ├── auth.ts
     │   ├── events.ts
+    │   ├── registrations.ts
     │   ├── sessions.ts
     │   └── users.ts
     ├── stores/
     │   ├── auth.ts
     │   ├── events.ts
     │   ├── notification.ts
+    │   ├── registrations.ts
     │   └── sessions.ts
     ├── router/
     │   └── index.ts
@@ -49,6 +51,8 @@ frontend/
     │   ├── events/
     │   │   ├── EventCard.vue
     │   │   └── EventForm.vue
+    │   ├── registrations/
+    │   │   └── EventRegistrationsList.vue
     │   └── sessions/
     │       ├── SessionTimeline.vue
     │       └── SessionForm.vue
@@ -72,6 +76,9 @@ frontend/
         ├── events.store.spec.ts
         ├── events.upload.spec.ts
         ├── events.views.spec.ts
+        ├── registrations.components.spec.ts
+        ├── registrations.store.spec.ts
+        ├── registrations.views.spec.ts
         ├── router.guards.spec.ts
         ├── sessions.components.spec.ts
         ├── sessions.store.spec.ts
@@ -80,7 +87,7 @@ frontend/
 
 ## Rutas
 
-Todas las vistas se cargan de forma diferida (`() => import(...)`); `EventForm.vue` y `SessionForm.vue` se cargan además con `defineAsyncComponent`.
+Todas las vistas se cargan de forma diferida (`() => import(...)`); `EventForm.vue`, `SessionForm.vue` y `EventRegistrationsList.vue` se cargan además con `defineAsyncComponent`.
 
 | Ruta              | Nombre        | Vista                 | Acceso                                     |
 | ----------------- | ------------- | --------------------- | ------------------------------------------ |
@@ -115,6 +122,16 @@ Regla de presentación: la UI muestra `total_capacity`, `registered_count` y `av
 - **Detalle** (`EventDetailView.vue`): compone el evento y su agenda con dos llamadas en paralelo (`GET /api/events/{id}` y `GET /api/events/{id}/sessions`), muestra `SessionTimeline`, estados de carga/error con reintento y carga `SessionForm.vue` con `defineAsyncComponent` en un chunk separado.
 - **Permisos de UI:** solo el `ORGANIZER` dueño o un `ADMIN` ven «Añadir sesión», editar y eliminar; en eventos `CANCELLED` se ocultan los controles de escritura y se muestra el aviso en español. La autorización real sigue impuesta por el backend.
 
+## Dominio `registrations`
+
+- **Tipos** (`src/types/api.ts`): `RegistrationStatus`, `RegistrationEventSummary`, `RegistrationSessionSummary`, `RegistrationRead`, `RegistrationListRead`/`RegistrationListResponse`, `RegistrationListQuery` y `EventRegistrationListQuery`.
+- **Servicio** (`src/services/registrations.ts`): alta al evento, alta a sesión, cancelación, «mis inscripciones», listado por evento y detalle; las altas devuelven `{ registration, created }` para distinguir un alta nueva (`201`) de una reactivación (`200`).
+- **Store** (`src/stores/registrations.ts`, `useRegistrationStore`): `items`, `total`, `page`, `size`, `pages`, `currentRegistration`, `isLoading`, `isSubmitting`, `errorMessage`, `fieldErrors` y `lastCreatedStatus`; acciones `fetchMyRegistrations`, `fetchEventRegistrations`, `fetchRegistrationById`, `registerForEvent`, `registerForSession`, `cancelRegistration`, `clearErrors` y `reset`. Consume los DTOs tal como llegan y no calcula cupos.
+- **Perfil** (`ProfileView.vue`): sección «Mis inscripciones» paginada y filtrable por estado (`Activa`/`Cancelada`), fecha UTC en español, resumen de sesión, cancelación con confirmación y feedback, estados de carga/vacío/error.
+- **Detalle** (`EventDetailView.vue`): botón «Inscribirme» visible solo para `ATTENDEE` y eventos `PUBLISHED`; se deshabilita con aviso si `available_capacity === 0` y muestra «Ya estás inscrito en este evento» cuando existe una inscripción activa. Las sesiones se inscriben desde el slot `#actions` de `SessionTimeline`, con el aviso «Debes inscribirte primero al evento» cuando falta la inscripción al evento y «No hay cupos disponibles para esta sesión» cuando la sesión está llena. Tras cada alta o cancelación se refrescan el evento y la agenda desde la API.
+- **Gestión** (`EventRegistrationsList.vue`): listado paginado y filtrable por estado para el `ORGANIZER` dueño o un `ADMIN`, con `Usuario #<user_id>`, estado y fecha; nunca `full_name` ni `email`. Se carga con `defineAsyncComponent` y `BaseSpinner` como `loadingComponent`.
+- **Privacidad y cupos:** la UI usa `available_capacity` de la API y nunca lo recalcula (R2.5); no usa `v-html` (R5.9).
+
 ## Comandos principales
 
 ### Desarrollo local
@@ -135,14 +152,14 @@ npx vitest run --coverage
 
 El script `pretest` instala las dependencias si falta `node_modules`. La suite usa `jsdom` y `@vue/test-utils`, con `createMemoryHistory` para las pruebas de router.
 
-Última validación registrada del Dominio 3 (`sessions`, 2026-11-01):
+Última validación registrada del Dominio 4 (`registrations`, 2026-11-01):
 
 | Control               | Resultado                                                        |
 | --------------------- | ---------------------------------------------------------------- |
-| Tests                 | **54 passed** en 13 archivos (45 previos + 9 de `sessions`)      |
-| Cobertura             | 94.28 % statements/lines, 85.92 % branches, 92.81 % functions    |
+| Tests                 | **62 passed** en 16 archivos (54 previos + 8 de `registrations`)  |
+| Cobertura             | **95.19 %** statements/lines, 86.39 % branches, 94.35 % functions |
 | Tipos                 | `vue-tsc --noEmit` sin errores                                   |
-| Build                 | 132 módulos; `SessionForm-pssouXmV.js` (5.41 kB) como chunk diferido separado, artefactos minificados y sin `.map` públicos |
+| Build                 | **136 módulos**; `EventRegistrationsList-B3wnZ5i7.js` (4.00 kB) como chunk diferido separado, artefactos minificados y sin `.map` públicos |
 
 ### Verificación de tipos (TypeScript / Vue)
 

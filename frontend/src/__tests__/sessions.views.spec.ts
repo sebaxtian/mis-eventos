@@ -14,6 +14,7 @@ import EventDetailView from '@/views/EventDetailView.vue'
 import { useAuthStore } from '@/stores/auth'
 import * as eventsService from '@/services/events'
 import * as sessionsService from '@/services/sessions'
+import * as registrationsService from '@/services/registrations'
 
 vi.mock('@/services/events', () => ({
   fetchEventsApi: vi.fn(),
@@ -32,11 +33,26 @@ vi.mock('@/services/sessions', () => ({
   deleteSessionApi: vi.fn(),
 }))
 
+vi.mock('@/services/registrations', () => ({
+  fetchMyRegistrationsApi: vi.fn(),
+  fetchEventRegistrationsApi: vi.fn(),
+  fetchRegistrationByIdApi: vi.fn(),
+  registerForEventApi: vi.fn(),
+  registerForSessionApi: vi.fn(),
+  cancelRegistrationApi: vi.fn(),
+}))
+
 const mockedFetchEventById = vi.mocked(eventsService.fetchEventByIdApi)
 const mockedFetchSessions = vi.mocked(sessionsService.fetchSessionsApi)
 const mockedCreateSession = vi.mocked(sessionsService.createSessionApi)
 const mockedUpdateSession = vi.mocked(sessionsService.updateSessionApi)
 const mockedDeleteSession = vi.mocked(sessionsService.deleteSessionApi)
+const mockedFetchMyRegistrations = vi.mocked(
+  registrationsService.fetchMyRegistrationsApi,
+)
+const mockedFetchEventRegistrations = vi.mocked(
+  registrationsService.fetchEventRegistrationsApi,
+)
 
 const organizer: AuthUser = {
   id: 2,
@@ -153,6 +169,20 @@ describe('EventDetailView agenda integration and session permissions', () => {
     window.sessionStorage.clear()
     vi.clearAllMocks()
     mockedFetchSessions.mockResolvedValue(emptySessions())
+    mockedFetchMyRegistrations.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 50,
+      pages: 0,
+    })
+    mockedFetchEventRegistrations.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 10,
+      pages: 0,
+    })
   })
 
   it('SES-AC-27 composes EventDetailView with event and sessions calls and loading state', async () => {

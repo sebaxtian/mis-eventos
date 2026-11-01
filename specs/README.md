@@ -1,7 +1,7 @@
 # Plan de Especificaciones Funcionales (SDD) - Mis Eventos
 
-**Versión:** 1.3
-**Fecha:** 31 de octubre de 2026
+**Versión:** 1.4
+**Fecha:** 1 de noviembre de 2026
 **Estado:** Vigente
 **Metodología:** Spec-Driven Development (SDD)
 
@@ -78,11 +78,7 @@ Motor transaccional de la plataforma, susceptible a errores de concurrencia.
 - **Alcance Backend:** `Registration` que vincula usuarios con eventos y, opcionalmente, con sesiones; consulta "mis inscripciones".
 - **Reglas Críticas:** inscripción atómica: comprobación de capacidad e inserción en la misma transacción con bloqueo (R5.4), probada contra PostgreSQL (R3.6); unicidad (un usuario no se inscribe dos veces al mismo ítem); un usuario solo ve sus propias inscripciones (R5.8); toda inscripción invalida la caché de eventos afectada (R4.4).
 - **Alcance Frontend:** vista "Mis inscripciones" en el perfil; botón de inscripción deshabilitado cuando la API informa cero cupos; feedback de éxito y error.
-- **Preguntas abiertas:**
-  - Modelo evento/sesión: ¿inscribirse a una sesión exige estar inscrito al evento?, ¿`session_id` es opcional?, ¿la unicidad se modela con índices parciales?
-  - Solo se admiten inscripciones a eventos `PUBLISHED` (propuesta: sí).
-  - Anulación de inscripciones: dentro o fuera de alcance.
-  - Efecto de cancelar un evento sobre sus inscripciones.
+- **Preguntas abiertas:** _(Resueltas en `specs/registrations/spec.md` §14: inscripción al evento obligatoria y a sesiones opcional con inscripción previa al evento; `session_id` nullable con índices únicos parciales y FKs `ON DELETE CASCADE` en `event_id`/`session_id` (`RESTRICT` solo en `user_id`); solo eventos `PUBLISHED` admiten inscripción y cancelar el evento no anula inscripciones; un cupo de evento por persona con cupo propio e independiente por sesión; anulación lógica sin plazo, idempotente y en cascada solo evento → sesiones; bloqueo `events` → `sessions` con `FOR UPDATE`; reactivación de filas `CANCELLED` con `200` revalidando capacidad y, en sesiones, la inscripción activa al evento; `/me` paginado con inscripciones al evento y a sesiones, listado por evento para organizador/`ADMIN` solo con inscripciones al evento y detalle; caché solo de `/me` por usuario con invalidación `registrations:` + `events:`; `RegistrationRead` sin datos personales del usuario. Decisiones D1–D14 aprobadas por el usuario el 2026-11-01 y D15–D16 derivadas; spec aprobada explícitamente por el usuario el 2026-11-01 ("Sí, apruebo"), implementación TDD (`B1..B34`, `F1..F7`) y validación (`V1..V6`) completadas el 2026-11-01 con veredicto `¿pasa? sí` del `reviewer` (38/38 criterios `REG-AC` y 14/14 reglas `REG-BR`): `Implementada` (v0.1).)_
 
 ### 1.5. Dominio: Entrega (`specs/delivery/`)
 
@@ -108,7 +104,7 @@ Principios transversales que aplican a **todas** las specs: R2 (aislamiento), R3
 | **1** | `specs/auth/`          | Autenticación, RBAC y Perfiles | `platform`                   | R5.1, R5.2, R5.3, R5.6, R5.8, R5.9                                                            | Roles, permisos por rol, gestión de perfiles        | — (resueltas en `specs/auth/spec.md` §12)                                 |
 | **2** | `specs/events/`        | Eventos y Catálogo             | `auth`                       | R3.6 (`pg_trgm`), R4.4 (caché Redis), R2.5 (cupos desde la API)                               | Imágenes WebP, lazy loading de componentes, caching | — (resueltas en `specs/events/spec.md` §12)                                      |
 | **3** | `specs/sessions/`      | Programación de Sesiones       | `events`                     | R3.4 (solapamiento), R5.3 (propiedad del evento)                                              | —                                                   | Resueltas en `specs/sessions/spec.md` §17–§18                            |
-| **4** | `specs/registrations/` | Inscripciones y Capacidad      | `auth`, `events`, `sessions` | R3.4 (límites y concurrencia), R3.6 (bloqueos en PostgreSQL), R5.4, R5.8, R4.4 (invalidación) | —                                                   | —                                                                        |
+| **4** | `specs/registrations/` | Inscripciones y Capacidad      | `auth`, `events`, `sessions` | R3.4 (límites y concurrencia), R3.6 (bloqueos en PostgreSQL), R5.4, R5.8, R4.4 (invalidación) | —                                                   | Resueltas en `specs/registrations/spec.md` §14 (D1–D14)                  |
 | **5** | `specs/delivery/`      | Entrega                        | Todos                        | R3.9 (cobertura)                                                                              | —                                                   | —                                                                        |
 
 ---
@@ -155,5 +151,5 @@ Cada requisito de `docs/prueba_tecnica_desarrollador_fullstack.md` tiene un domi
 |   1   | `auth`          | Implementada           | 1.0     | 2026-10-31           |
 |   2   | `events`        | Implementada           | 1.0     | 2026-10-31           |
 |   3   | `sessions`      | Implementada           | 0.2     | 2026-11-01           |
-|   4   | `registrations` | Pendiente de redacción | —       | —                    |
+|   4   | `registrations` | Implementada           | 0.1     | 2026-11-01           |
 |   5   | `delivery`      | Pendiente de redacción | —       | —                    |

@@ -153,14 +153,15 @@ def get_session_registered_count(
     session: DBSession,
     session_id: int,
 ) -> int:
-    """Return the number of registrations for a session.
+    """Return the number of active registrations for a session.
 
-    The ``registrations`` table belongs to a later domain; until it exists the
-    count is always zero. The function is module-level so tests can
-    monkeypatch it to simulate sessions with attendees.
+    The function is module-level so tests can monkeypatch it to simulate
+    sessions with attendees.
     """
 
-    return 0
+    from app.registrations.service import count_active_session_registrations
+
+    return count_active_session_registrations(session, session_id)
 
 
 def _can_view_event(event: Event, actor: User | None) -> bool:

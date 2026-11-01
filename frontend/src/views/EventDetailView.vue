@@ -8,6 +8,7 @@ import BaseSpinner from '@/components/base/BaseSpinner.vue'
 import SessionTimeline from '@/components/sessions/SessionTimeline.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventStore } from '@/stores/events'
+import { useRegistrationStore } from '@/stores/registrations'
 import { useSessionStore } from '@/stores/sessions'
 import type {
   EventStatus,
@@ -22,11 +23,19 @@ const SessionForm = defineAsyncComponent({
   delay: 0,
 })
 
+const EventRegistrationsList = defineAsyncComponent({
+  loader: () =>
+    import('@/components/registrations/EventRegistrationsList.vue'),
+  loadingComponent: BaseSpinner,
+  delay: 0,
+})
+
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useEventStore()
 const sessionStore = useSessionStore()
+const registrationStore = useRegistrationStore()
 
 const invalidId = ref(false)
 const imageInputRef = ref<HTMLInputElement | null>(null)
@@ -47,9 +56,37 @@ const canManage = computed(() => {
 
 const isCancelled = computed(() => event.value?.status === 'CANCELLED')
 
-const isAttendeeOrAnonymous = computed(
-  () => authStore.role === null || authStore.role === 'ATTENDEE',
+const isAttendee = computed(() => authStore.role === 'ATTENDEE')
+
+const isPublished = computed(() => event.value?.status === 'PUBLISHED')
+
+const showRegistrationBlock = computed(
+  () => isAttendee.value && isPublished.value,
 )
+
+const myEventRegistration = computed(() =>
+  registrationStore.items.find(
+    (item) =>
+      item.event_id === event.value?.id &&
+      item.session_id === null &&
+      item.status === 'ACTIVE',
+  ),
+)
+
+const mySessionRegistrationIds = computed(
+  () =>
+    new Set(
+      registrationStore.items
+        .filter(
+          (item) =>
+            item.session_id !== null && item.status === 'ACTIVE',
+        )
+        .map((item) => item.session_id as number),
+    ),
+)
+
+const registrationFeedback = ref('')
+const registrationFeedbackType = ref<'success' | 'error'>('success')
 
 const STATUS_LABELS: Record<EventStatus, string> = {
   DRAFT: 'Borrador',
@@ -108,6 +145,92 @@ async function loadSessions(): Promise<void> {
   if (!Number.isInteger(parsedId) || parsedId <= 0) return
   sessionStore.clearErrors()
   await sessionStore.fetchSessions(parsedId)
+}
+
+async function loadMyRegistrations(): Promise<void> {
+  if (!isAttendee.value) return
+  const parsedId = Number(route.params.id)
+  if (!Number.isInteger(parsedId) || parsedId <= 0) return
+  await registrationStore.fetchMyRegistrations({
+    page: 1,
+    size: 50,
+    status: 'ACTIVE',
+    event_id: parsedId,
+  })
+}
+
+async function refreshAfterRegistration(): Promise<void> {
+  if (!event.value) return
+  const eventId = event.value.id
+  await Promise.all([
+    store.fetchEventById(eventId),
+    sessionStore.fetchSessions(eventId),
+    loadMyRegistrations(),
+  ])
+}
+
+async function handleRegisterForEvent(): Promise<void> {
+  if (!event.value) return
+  registrationFeedback.value = ''
+  try {
+    await registrationStore.registerForEvent(event.value.id)
+    registrationFeedbackType.value = 'success'
+    registrationFeedback.value =
+      registrationStore.lastCreatedStatus === 'reactivated'
+        ? 'Inscripción reactivada correctamente.'
+        : 'Inscripción realizada correctamente.'
+    await refreshAfterRegistration()
+  } catch {
+    registrationFeedbackType.value = 'error'
+    registrationFeedback.value =
+      registrationStore.errorMessage ||
+      'No se pudo completar la inscripción al evento'
+  }
+}
+
+async function handleCancelMyRegistration(id: number): Promise<void> {
+  if (
+    !window.confirm('¿Seguro que deseas cancelar tu inscripción?')
+  ) {
+    return
+  }
+  registrationFeedback.value = ''
+  try {
+    await registrationStore.cancelRegistration(id)
+    registrationFeedbackType.value = 'success'
+    registrationFeedback.value = 'Inscripción cancelada correctamente.'
+    await refreshAfterRegistration()
+  } catch {
+    registrationFeedbackType.value = 'error'
+    registrationFeedback.value =
+      registrationStore.errorMessage ||
+      'No se pudo cancelar la inscripción'
+  }
+}
+
+async function handleRegisterForSession(
+  session: SessionRead,
+): Promise<void> {
+  if (!event.value) return
+  registrationFeedback.value = ''
+  try {
+    await registrationStore.registerForSession(
+      event.value.id,
+      session.id,
+    )
+    registrationFeedbackType.value = 'success'
+    registrationFeedback.value =
+      'Inscripción a la sesión realizada correctamente.'
+    await Promise.all([
+      sessionStore.fetchSessions(event.value.id),
+      loadMyRegistrations(),
+    ])
+  } catch {
+    registrationFeedbackType.value = 'error'
+    registrationFeedback.value =
+      registrationStore.errorMessage ||
+      'No se pudo completar la inscripción a la sesión'
+  }
 }
 
 async function handleSessionSubmit(
@@ -227,6 +350,7 @@ async function handleDelete(): Promise<void> {
 onMounted(async () => {
   store.clearCurrentEvent()
   sessionStore.reset()
+  registrationStore.reset()
   const parsedId = Number(route.params.id)
   if (!Number.isInteger(parsedId) || parsedId <= 0) {
     invalidId.value = true
@@ -236,6 +360,7 @@ onMounted(async () => {
     store.fetchEventById(parsedId),
     sessionStore.fetchSessions(parsedId),
   ])
+  await loadMyRegistrations()
 })
 </script>
 
@@ -408,26 +533,69 @@ onMounted(async () => {
 
         <div v-else class="mt-3">
           <SessionTimeline :sessions="sessionStore.items">
-            <template
-              v-if="canManageSessions && !isCancelled"
-              #actions="{ session }"
-            >
-              <BaseButton
-                type="button"
-                variant="secondary"
-                data-testid="session-edit-button"
-                @click="openEditSession(session)"
-              >
-                Editar
-              </BaseButton>
-              <BaseButton
-                type="button"
-                variant="danger"
-                data-testid="session-delete-button"
-                @click="handleDeleteSession(session)"
-              >
-                Eliminar
-              </BaseButton>
+            <template #actions="{ session }">
+              <template v-if="canManageSessions && !isCancelled">
+                <BaseButton
+                  type="button"
+                  variant="secondary"
+                  data-testid="session-edit-button"
+                  @click="openEditSession(session)"
+                >
+                  Editar
+                </BaseButton>
+                <BaseButton
+                  type="button"
+                  variant="danger"
+                  data-testid="session-delete-button"
+                  @click="handleDeleteSession(session)"
+                >
+                  Eliminar
+                </BaseButton>
+              </template>
+              <template v-else-if="isAttendee && isPublished">
+                <BaseButton
+                  v-if="mySessionRegistrationIds.has(session.id)"
+                  type="button"
+                  variant="secondary"
+                  disabled
+                  data-testid="session-registered-button"
+                >
+                  Ya estás inscrito
+                </BaseButton>
+                <template v-else-if="!myEventRegistration">
+                  <BaseButton
+                    type="button"
+                    disabled
+                    data-testid="session-register-disabled"
+                  >
+                    Inscribirme a esta sesión
+                  </BaseButton>
+                  <span
+                    data-testid="session-event-required"
+                    class="text-xs font-medium text-amber-700"
+                  >
+                    Debes inscribirte primero al evento
+                  </span>
+                </template>
+                <template v-else>
+                  <BaseButton
+                    type="button"
+                    data-testid="session-register-button"
+                    :disabled="session.available_capacity === 0"
+                    :is-loading="registrationStore.isSubmitting"
+                    @click="handleRegisterForSession(session)"
+                  >
+                    Inscribirme a esta sesión
+                  </BaseButton>
+                  <span
+                    v-if="session.available_capacity === 0"
+                    data-testid="session-full-warning"
+                    class="text-xs font-medium text-amber-700"
+                  >
+                    No hay cupos disponibles para esta sesión
+                  </span>
+                </template>
+              </template>
             </template>
           </SessionTimeline>
         </div>
@@ -523,12 +691,69 @@ onMounted(async () => {
         />
       </section>
 
+      <EventRegistrationsList
+        v-if="canManage"
+        :event-id="event.id"
+        :can-manage="canManage"
+      />
+
       <section
-        v-if="isAttendeeOrAnonymous"
-        data-testid="registration-placeholder"
-        class="rounded-lg border border-dashed border-slate-300 bg-white p-4 text-sm text-slate-600"
+        v-if="showRegistrationBlock"
+        data-testid="registration-block"
+        class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
       >
-        Las inscripciones estarán disponibles próximamente.
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold text-slate-900">
+            Inscripción
+          </h2>
+          <span
+            v-if="myEventRegistration"
+            data-testid="registration-registered-badge"
+            class="rounded-full bg-emerald-100 px-3 py-1 text-xs font-medium text-emerald-800"
+          >
+            Ya estás inscrito en este evento
+          </span>
+        </div>
+
+        <BaseAlert
+          v-if="registrationFeedback"
+          :type="registrationFeedbackType"
+          :message="registrationFeedback"
+          class="mt-3"
+        />
+
+        <div v-if="myEventRegistration" class="mt-3 flex justify-end">
+          <BaseButton
+            type="button"
+            variant="danger"
+            data-testid="registration-cancel-button"
+            :is-loading="registrationStore.isSubmitting"
+            @click="handleCancelMyRegistration(myEventRegistration.id)"
+          >
+            Cancelar inscripción
+          </BaseButton>
+        </div>
+
+        <div v-else class="mt-3 flex flex-col gap-2">
+          <div>
+            <BaseButton
+              type="button"
+              data-testid="registration-button"
+              :disabled="event.available_capacity === 0"
+              :is-loading="registrationStore.isSubmitting"
+              @click="handleRegisterForEvent"
+            >
+              Inscribirme
+            </BaseButton>
+          </div>
+          <p
+            v-if="event.available_capacity === 0"
+            data-testid="registration-full-warning"
+            class="text-xs font-medium text-amber-700"
+          >
+            No hay cupos disponibles para este evento
+          </p>
+        </div>
       </section>
     </article>
   </main>

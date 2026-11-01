@@ -157,3 +157,49 @@ export interface SessionUpdatePayload {
   end_time?: string
   capacity?: number
 }
+
+export type RegistrationStatus = 'ACTIVE' | 'CANCELLED'
+
+export interface RegistrationEventSummary {
+  id: number
+  title: string
+  date: string
+  status: EventStatus
+}
+
+export interface RegistrationSessionSummary {
+  id: number
+  title: string
+  speaker: string
+  start_time: string
+  end_time: string
+}
+
+export interface RegistrationRead {
+  id: number
+  user_id: number
+  event_id: number
+  session_id: number | null
+  status: RegistrationStatus
+  event: RegistrationEventSummary
+  session: RegistrationSessionSummary | null
+  created_at: string
+  updated_at: string
+}
+
+export type RegistrationListRead = PaginatedResponse<RegistrationRead>
+
+export type RegistrationListResponse = RegistrationListRead
+
+export interface RegistrationListQuery {
+  page?: number
+  size?: number
+  status?: RegistrationStatus
+  event_id?: number
+}
+
+export interface EventRegistrationListQuery {
+  page?: number
+  size?: number
+  status?: RegistrationStatus
+}

@@ -6,6 +6,7 @@ from app.core.config import settings
 from app.users import models  # noqa: F401  (register SQLModel metadata)
 from app.events import models  # noqa: F401  (register SQLModel metadata)
 from app.sessions import models  # noqa: F401  (register SQLModel metadata)
+from app.registrations import models  # noqa: F401  (register SQLModel metadata)
 
 config = context.config
 

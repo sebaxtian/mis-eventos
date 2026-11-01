@@ -4,7 +4,7 @@ Plataforma web para que la empresa **Mis Eventos** administre sus eventos de pri
 
 Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarrollador full stack), desarrollada con **Spec-Driven Development (SDD)**: la especificación precede al código y cada regla de negocio se cubre con tests.
 
-> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`), 1 (`auth`), 2 (`events`) y 3 (`sessions`, v0.2) están implementados y validados. `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`; `events` aporta CRUD con estados, búsqueda trigrama, imágenes WebP y caché Redis; `sessions` aporta la agenda con ventana UTC, no solapamiento serializado con `SELECT ... FOR UPDATE`, capacidad por sesión, timeline y formulario. Los dominios `registrations` y `delivery` siguen pendientes. El producto completo no está terminado.
+> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`), 1 (`auth`), 2 (`events`), 3 (`sessions`, v0.2) y 4 (`registrations`, v0.1) están implementados y validados. `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`; `events` aporta CRUD con estados, búsqueda trigrama, imágenes WebP y caché Redis; `sessions` aporta la agenda con ventana UTC, no solapamiento serializado con `SELECT ... FOR UPDATE`, capacidad por sesión, timeline y formulario; `registrations` aporta la inscripción atómica a eventos y sesiones con control de capacidad, reactivación, cancelación lógica con cascada evento → sesiones, «Mis inscripciones» y listado de asistentes por evento. Solo el dominio `delivery` sigue pendiente. El producto completo no está terminado.
 
 ## Tabla de contenido
 
@@ -113,12 +113,12 @@ El trabajo avanza por dominios: cada uno se especifica, se aprueba, se implement
 |   1   | `auth`          | Implementada (v1.0)    | Implementada |
 |   2   | `events`        | Implementada (v1.0)    | Implementada |
 |   3   | `sessions`      | Implementada (v0.2)    | Implementada |
-|   4   | `registrations` | Pendiente de redacción | Pendiente    |
+|   4   | `registrations` | Implementada (v0.1)    | Implementada |
 |   5   | `delivery`      | Pendiente de redacción | Pendiente    |
 
-El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform`, `auth`, `events` y `sessions` (v0.2, 2026-11-01) en [specs/platform/spec.md](specs/platform/spec.md), [specs/auth/spec.md](specs/auth/spec.md), [specs/events/spec.md](specs/events/spec.md) y [specs/sessions/spec.md](specs/sessions/spec.md).
+El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform`, `auth`, `events`, `sessions` (v0.2, 2026-11-01) y `registrations` (v0.1, 2026-11-01) en [specs/platform/spec.md](specs/platform/spec.md), [specs/auth/spec.md](specs/auth/spec.md), [specs/events/spec.md](specs/events/spec.md), [specs/sessions/spec.md](specs/sessions/spec.md) y [specs/registrations/spec.md](specs/registrations/spec.md).
 
-**Próximos pasos:** especificar el dominio `registrations`. Antes de escribir código deben existir `specs/registrations/spec.md`, `specs/registrations/plan.md` y `specs/registrations/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
+**Próximos pasos:** especificar el dominio `delivery`. Antes de escribir código deben existir `specs/delivery/spec.md`, `specs/delivery/plan.md` y `specs/delivery/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
 
 ## Puesta en marcha
 
@@ -241,11 +241,25 @@ El Dominio 3 (`sessions`, v0.2) se validó en su cierre el 2026-11-01 con estas 
 | Concurrencia          | `pytest -k "ses_ac_08 or ses_ac_10 or ses_ac_30"` → 3/3, con `FOR UPDATE` sobre el evento (también en `DELETE`) |
 | E2E                   | Gateway Nginx con datos sembrados por API: catálogo, timeline, crear/editar/eliminar, permisos y `CANCELLED`; datos y claves Redis limpiados |
 
-Los porcentajes corresponden a la última validación de `platform`, `auth`, `events` y `sessions` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+El Dominio 4 (`registrations`, v0.1) se validó en su cierre el 2026-11-01 con estas comprobaciones:
 
-| Control pendiente          | Dominio responsable                                                         |
-| -------------------------- | --------------------------------------------------------------------------- |
-| Reglas de negocio críticas | Tests de capacidad concurrente de inscripciones contra PostgreSQL (`registrations`) |
+| Control               | Herramienta / resultado                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Tests de backend      | `pytest` contra PostgreSQL en contenedor: **134/134** (98 previos + 36 de `registrations`)     |
+| Cobertura de backend  | **97 %** con reporte XML (`backend/coverage.xml`); `app/registrations/` 100 % en `models`, `schemas`, `dependencies` y `router`, y 98 % en `service` |
+| Tests de frontend     | Vitest: **62/62** en 16 archivos (54 previos + 8 de `registrations`)                            |
+| Cobertura de frontend | **95.19 %** de líneas                                                                          |
+| Tipos del frontend    | `vue-tsc --noEmit` sin errores                                                                 |
+| Build de producción   | Vite minificado: **136 módulos**, `EventRegistrationsList-B3wnZ5i7.js` (4.00 kB) como chunk diferido separado |
+| Contrato de API       | OpenAPI con **6 operaciones** de `registrations`, tag `registrations`, códigos `401/403/404/409/422` y **sin `400`** |
+| Migración             | `0005_create_registrations (head)` sobre PostgreSQL                                             |
+| Concurrencia          | `pytest -k "reg_ac_04 or reg_ac_16"` → 2 passed en **3/3** ejecuciones consecutivas, con `FOR UPDATE` en el orden `events` → `sessions` |
+| Integración           | Solo cambió el cuerpo de `get_registered_count` y `get_session_registered_count`; sin cambios de contrato en `events`/`sessions` |
+| E2E                   | Gateway Nginx con datos sembrados y limpiados (`0/0/0/0`, `redis_dbsize=0`): evento lleno, sesión llena, cascada al cancelar, listado sin datos personales, consola sin errores y chunk diferido |
+
+Los porcentajes corresponden a la última validación de `platform`, `auth`, `events`, `sessions` y `registrations` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+
+La capacidad concurrente de inscripciones quedó cubierta en `registrations` (`REG-AC-04` y `REG-AC-16`, 3/3). El único control pendiente es el cierre documental de `delivery`.
 
 ## Licencia
 

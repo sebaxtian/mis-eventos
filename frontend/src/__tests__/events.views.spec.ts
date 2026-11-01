@@ -17,6 +17,7 @@ import EventDetailView from '@/views/EventDetailView.vue'
 import EventFormView from '@/views/EventFormView.vue'
 import * as eventsService from '@/services/events'
 import * as sessionsService from '@/services/sessions'
+import * as registrationsService from '@/services/registrations'
 
 vi.mock('@/services/events', () => ({
   fetchEventsApi: vi.fn(),
@@ -35,6 +36,15 @@ vi.mock('@/services/sessions', () => ({
   deleteSessionApi: vi.fn(),
 }))
 
+vi.mock('@/services/registrations', () => ({
+  fetchMyRegistrationsApi: vi.fn(),
+  fetchEventRegistrationsApi: vi.fn(),
+  fetchRegistrationByIdApi: vi.fn(),
+  registerForEventApi: vi.fn(),
+  registerForSessionApi: vi.fn(),
+  cancelRegistrationApi: vi.fn(),
+}))
+
 const mockedFetchEvents = vi.mocked(eventsService.fetchEventsApi)
 const mockedFetchEventById = vi.mocked(eventsService.fetchEventByIdApi)
 const mockedCreateEvent = vi.mocked(eventsService.createEventApi)
@@ -42,6 +52,12 @@ const mockedUpdateEvent = vi.mocked(eventsService.updateEventApi)
 const mockedDeleteEvent = vi.mocked(eventsService.deleteEventApi)
 const mockedUploadImage = vi.mocked(eventsService.uploadEventImageApi)
 const mockedFetchSessions = vi.mocked(sessionsService.fetchSessionsApi)
+const mockedFetchMyRegistrations = vi.mocked(
+  registrationsService.fetchMyRegistrationsApi,
+)
+const mockedFetchEventRegistrations = vi.mocked(
+  registrationsService.fetchEventRegistrationsApi,
+)
 
 beforeEach(() => {
   mockedFetchSessions.mockResolvedValue({ items: [], total: 0 })
@@ -303,6 +319,20 @@ describe('EventDetailView detail, responsive image and role-aware actions', () =
     window.sessionStorage.clear()
     vi.restoreAllMocks()
     vi.clearAllMocks()
+    mockedFetchMyRegistrations.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 50,
+      pages: 0,
+    })
+    mockedFetchEventRegistrations.mockResolvedValue({
+      items: [],
+      total: 0,
+      page: 1,
+      size: 10,
+      pages: 0,
+    })
   })
 
   it('EVT-AC-29 renders EventDetailView with owner/admin actions and hides registration button for organizers', async () => {
@@ -456,7 +486,7 @@ describe('EventDetailView detail, responsive image and role-aware actions', () =
     ).toBe(false)
   })
 
-  it('EVT-AC-29 shows a registration placeholder but no registration button to attendees', async () => {
+  it('EVT-AC-29 shows the registration action only to attendees', async () => {
     const authStore = useAuthStore()
     authStore.setSession('token-attendee', attendee)
 
@@ -468,7 +498,10 @@ describe('EventDetailView detail, responsive image and role-aware actions', () =
     const { wrapper } = await mountDetail()
 
     expect(
-      wrapper.find('[data-testid="registration-placeholder"]').exists(),
+      wrapper.find('[data-testid="registration-block"]').exists(),
+    ).toBe(true)
+    expect(
+      wrapper.find('[data-testid="registration-button"]').exists(),
     ).toBe(true)
     expect(
       wrapper.find('[data-testid="event-edit-link"]').exists(),
@@ -482,7 +515,7 @@ describe('EventDetailView detail, responsive image and role-aware actions', () =
     expect(
       wrapper.find('[data-testid="event-delete-button"]').exists(),
     ).toBe(false)
-    expect(wrapper.text()).not.toContain('Inscribirme')
+    expect(wrapper.text()).toContain('Inscribirme')
   })
 
   it('EVT-AC-29 shows Evento no encontrado when the API responds 404', async () => {

@@ -7,6 +7,10 @@ from app.core.config import settings
 from app.core.exceptions import register_exception_handlers
 from app.core.health import router as health_router
 from app.events.router import router as events_router
+from app.registrations.router import (
+    events_router as registrations_events_router,
+    router as registrations_router,
+)
 from app.sessions.router import router as sessions_router
 from app.users.bootstrap import run_startup_bootstrap
 from app.users.router import router as users_router
@@ -31,5 +35,7 @@ app.include_router(health_router)
 app.include_router(auth_router)
 app.include_router(users_router)
 app.include_router(events_router)
+app.include_router(registrations_events_router)
+app.include_router(registrations_router)
 app.include_router(sessions_router)
 
