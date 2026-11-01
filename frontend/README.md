@@ -30,11 +30,13 @@ frontend/
     │   ├── api.ts
     │   ├── auth.ts
     │   ├── events.ts
+    │   ├── sessions.ts
     │   └── users.ts
     ├── stores/
     │   ├── auth.ts
     │   ├── events.ts
-    │   └── notification.ts
+    │   ├── notification.ts
+    │   └── sessions.ts
     ├── router/
     │   └── index.ts
     ├── components/
@@ -44,9 +46,12 @@ frontend/
     │   │   ├── BaseInput.vue
     │   │   ├── BaseSkeleton.vue
     │   │   └── BaseSpinner.vue
-    │   └── events/
-    │       ├── EventCard.vue
-    │       └── EventForm.vue
+    │   ├── events/
+    │   │   ├── EventCard.vue
+    │   │   └── EventForm.vue
+    │   └── sessions/
+    │       ├── SessionTimeline.vue
+    │       └── SessionForm.vue
     ├── views/
     │   ├── AdminPlaceholderView.vue
     │   ├── AdminUsersView.vue
@@ -67,12 +72,15 @@ frontend/
         ├── events.store.spec.ts
         ├── events.upload.spec.ts
         ├── events.views.spec.ts
-        └── router.guards.spec.ts
+        ├── router.guards.spec.ts
+        ├── sessions.components.spec.ts
+        ├── sessions.store.spec.ts
+        └── sessions.views.spec.ts
 ```
 
 ## Rutas
 
-Todas las vistas se cargan de forma diferida (`() => import(...)`); `EventForm.vue` se carga además con `defineAsyncComponent`.
+Todas las vistas se cargan de forma diferida (`() => import(...)`); `EventForm.vue` y `SessionForm.vue` se cargan además con `defineAsyncComponent`.
 
 | Ruta              | Nombre        | Vista                 | Acceso                                     |
 | ----------------- | ------------- | --------------------- | ------------------------------------------ |
@@ -98,6 +106,15 @@ Los guards de `router/index.ts` son **solo UX**: redirigen a `/login?redirect=..
 
 Regla de presentación: la UI muestra `total_capacity`, `registered_count` y `available_capacity` **tal como llegan de la API**; el cliente no calcula cupos (R2.5). La UI nunca usa `v-html` (R5.9).
 
+## Dominio `sessions`
+
+- **Tipos** (`src/types/api.ts`): `SessionRead`, `SessionListResponse`, `SessionCreatePayload` y `SessionUpdatePayload`.
+- **Servicio** (`src/services/sessions.ts`): listado, detalle, creación, edición parcial y borrado sobre `/api/events/{event_id}/sessions`.
+- **Store** (`src/stores/sessions.ts`, `useSessionStore`): `items`, `total`, `currentSession`, `isLoading`, `isSubmitting`, `errorMessage` y `fieldErrors`; acciones `fetchSessions`, `fetchSessionById`, `createSession`, `updateSession`, `deleteSession`, `clearErrors` y `reset`. Conserva `available_capacity` tal como llega de la API y nunca envía `event_id` en el cuerpo.
+- **Componentes** (`src/components/sessions/`): `SessionTimeline.vue` (orden cronológico, hora UTC formateada en español, ponente, descripción opcional y cupos de la API; estado vacío en español) y `SessionForm.vue` (creación/edición, `datetime-local` convertido a UTC con `toISOString()`, errores `422` por campo y `409` en español).
+- **Detalle** (`EventDetailView.vue`): compone el evento y su agenda con dos llamadas en paralelo (`GET /api/events/{id}` y `GET /api/events/{id}/sessions`), muestra `SessionTimeline`, estados de carga/error con reintento y carga `SessionForm.vue` con `defineAsyncComponent` en un chunk separado.
+- **Permisos de UI:** solo el `ORGANIZER` dueño o un `ADMIN` ven «Añadir sesión», editar y eliminar; en eventos `CANCELLED` se ocultan los controles de escritura y se muestra el aviso en español. La autorización real sigue impuesta por el backend.
+
 ## Comandos principales
 
 ### Desarrollo local
@@ -118,14 +135,14 @@ npx vitest run --coverage
 
 El script `pretest` instala las dependencias si falta `node_modules`. La suite usa `jsdom` y `@vue/test-utils`, con `createMemoryHistory` para las pruebas de router.
 
-Última validación registrada del Dominio 2 (`events`, 2026-10-31):
+Última validación registrada del Dominio 3 (`sessions`, 2026-11-01):
 
 | Control               | Resultado                                                        |
 | --------------------- | ---------------------------------------------------------------- |
-| Tests                 | **45 passed** en 10 archivos (19 de `platform`/`auth` + 26 de `events`) |
-| Cobertura             | 92.65 % statements/lines, 83.78 % branches, 90.17 % functions    |
+| Tests                 | **54 passed** en 13 archivos (45 previos + 9 de `sessions`)      |
+| Cobertura             | 94.28 % statements/lines, 85.92 % branches, 92.81 % functions    |
 | Tipos                 | `vue-tsc --noEmit` sin errores                                   |
-| Build                 | 126 módulos; chunks diferidos minificados y sin `.map` públicos   |
+| Build                 | 132 módulos; `SessionForm-pssouXmV.js` (5.41 kB) como chunk diferido separado, artefactos minificados y sin `.map` públicos |
 
 ### Verificación de tipos (TypeScript / Vue)
 

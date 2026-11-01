@@ -1,17 +1,32 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, defineAsyncComponent, onMounted, ref } from 'vue'
 import { RouterLink, useRoute, useRouter } from 'vue-router'
 import BaseAlert from '@/components/base/BaseAlert.vue'
 import BaseButton from '@/components/base/BaseButton.vue'
 import BaseSkeleton from '@/components/base/BaseSkeleton.vue'
+import BaseSpinner from '@/components/base/BaseSpinner.vue'
+import SessionTimeline from '@/components/sessions/SessionTimeline.vue'
 import { useAuthStore } from '@/stores/auth'
 import { useEventStore } from '@/stores/events'
-import type { EventStatus } from '@/types/api'
+import { useSessionStore } from '@/stores/sessions'
+import type {
+  EventStatus,
+  SessionCreatePayload,
+  SessionRead,
+  SessionUpdatePayload,
+} from '@/types/api'
+
+const SessionForm = defineAsyncComponent({
+  loader: () => import('@/components/sessions/SessionForm.vue'),
+  loadingComponent: BaseSpinner,
+  delay: 0,
+})
 
 const route = useRoute()
 const router = useRouter()
 const authStore = useAuthStore()
 const store = useEventStore()
+const sessionStore = useSessionStore()
 
 const invalidId = ref(false)
 const imageInputRef = ref<HTMLInputElement | null>(null)
@@ -64,6 +79,88 @@ const imageSrcSet = computed(() => {
 const notFoundMessage = computed(() =>
   invalidId.value ? 'Evento no encontrado' : store.errorMessage,
 )
+
+const canManageSessions = canManage
+const showSessionForm = ref(false)
+const editingSession = ref<SessionRead | null>(null)
+const sessionFeedback = ref('')
+const sessionFeedbackType = ref<'success' | 'error'>('success')
+
+function openCreateSession(): void {
+  editingSession.value = null
+  sessionStore.clearErrors()
+  showSessionForm.value = true
+}
+
+function openEditSession(session: SessionRead): void {
+  editingSession.value = session
+  sessionStore.clearErrors()
+  showSessionForm.value = true
+}
+
+function closeSessionForm(): void {
+  showSessionForm.value = false
+  editingSession.value = null
+}
+
+async function loadSessions(): Promise<void> {
+  const parsedId = Number(route.params.id)
+  if (!Number.isInteger(parsedId) || parsedId <= 0) return
+  sessionStore.clearErrors()
+  await sessionStore.fetchSessions(parsedId)
+}
+
+async function handleSessionSubmit(
+  payload: SessionCreatePayload | SessionUpdatePayload,
+): Promise<void> {
+  if (!event.value) return
+  sessionFeedback.value = ''
+  try {
+    if (editingSession.value) {
+      await sessionStore.updateSession(
+        event.value.id,
+        editingSession.value.id,
+        payload as SessionUpdatePayload,
+      )
+      sessionFeedbackType.value = 'success'
+      sessionFeedback.value = 'Sesión actualizada correctamente.'
+    } else {
+      await sessionStore.createSession(
+        event.value.id,
+        payload as SessionCreatePayload,
+      )
+      sessionFeedbackType.value = 'success'
+      sessionFeedback.value = 'Sesión creada correctamente.'
+    }
+    closeSessionForm()
+    await sessionStore.fetchSessions(event.value.id)
+  } catch {
+    // The store exposes the Spanish detail through errorMessage; the form
+    // keeps the dialog open and renders it.
+  }
+}
+
+async function handleDeleteSession(session: SessionRead): Promise<void> {
+  if (!event.value) return
+  if (
+    !window.confirm(
+      `¿Seguro que deseas eliminar la sesión "${session.title}"?`,
+    )
+  ) {
+    return
+  }
+  sessionFeedback.value = ''
+  try {
+    await sessionStore.deleteSession(event.value.id, session.id)
+    sessionFeedbackType.value = 'success'
+    sessionFeedback.value = 'Sesión eliminada correctamente.'
+    await sessionStore.fetchSessions(event.value.id)
+  } catch {
+    sessionFeedbackType.value = 'error'
+    sessionFeedback.value =
+      sessionStore.errorMessage || 'No se pudo eliminar la sesión'
+  }
+}
 
 function onImageSelected(event: Event): void {
   const target = event.target as HTMLInputElement
@@ -129,12 +226,16 @@ async function handleDelete(): Promise<void> {
 
 onMounted(async () => {
   store.clearCurrentEvent()
+  sessionStore.reset()
   const parsedId = Number(route.params.id)
   if (!Number.isInteger(parsedId) || parsedId <= 0) {
     invalidId.value = true
     return
   }
-  await store.fetchEventById(parsedId)
+  await Promise.all([
+    store.fetchEventById(parsedId),
+    sessionStore.fetchSessions(parsedId),
+  ])
 })
 </script>
 
@@ -238,6 +339,110 @@ onMounted(async () => {
             Organizador #{{ event.organizer_id }}
           </p>
         </div>
+      </section>
+
+      <section
+        data-testid="session-agenda"
+        class="rounded-lg border border-slate-200 bg-white p-5 shadow-sm"
+      >
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-lg font-semibold text-slate-900">Agenda</h2>
+          <BaseButton
+            v-if="canManageSessions && !isCancelled"
+            type="button"
+            data-testid="session-add-button"
+            @click="openCreateSession"
+          >
+            Añadir sesión
+          </BaseButton>
+        </div>
+
+        <BaseAlert
+          v-if="canManageSessions && isCancelled"
+          data-testid="sessions-cancelled-warning"
+          type="warning"
+          class="mt-3"
+          message="Un evento cancelado no permite modificar sus sesiones"
+        />
+
+        <BaseAlert
+          v-if="sessionFeedback"
+          :type="sessionFeedbackType"
+          :message="sessionFeedback"
+          class="mt-3"
+        />
+
+        <div
+          v-if="sessionStore.isLoading"
+          data-testid="sessions-loading"
+          class="mt-3"
+        >
+          <BaseSkeleton :lines="3" />
+        </div>
+
+        <div
+          v-else-if="sessionStore.errorMessage && !showSessionForm"
+          data-testid="sessions-error"
+          class="mt-3 flex flex-col gap-2"
+        >
+          <BaseAlert type="error" :message="sessionStore.errorMessage" />
+          <p
+            v-for="error in sessionStore.fieldErrors"
+            :key="`${error.field}-${error.message}`"
+            data-testid="sessions-field-error"
+            class="text-xs text-red-600"
+          >
+            {{ error.field }}: {{ error.message }}
+          </p>
+          <div>
+            <BaseButton
+              type="button"
+              variant="secondary"
+              data-testid="sessions-retry"
+              @click="loadSessions"
+            >
+              Reintentar
+            </BaseButton>
+          </div>
+        </div>
+
+        <div v-else class="mt-3">
+          <SessionTimeline :sessions="sessionStore.items">
+            <template
+              v-if="canManageSessions && !isCancelled"
+              #actions="{ session }"
+            >
+              <BaseButton
+                type="button"
+                variant="secondary"
+                data-testid="session-edit-button"
+                @click="openEditSession(session)"
+              >
+                Editar
+              </BaseButton>
+              <BaseButton
+                type="button"
+                variant="danger"
+                data-testid="session-delete-button"
+                @click="handleDeleteSession(session)"
+              >
+                Eliminar
+              </BaseButton>
+            </template>
+          </SessionTimeline>
+        </div>
+
+        <SessionForm
+          v-if="showSessionForm && canManageSessions && !isCancelled"
+          class="mt-4"
+          :event-id="event.id"
+          :session="editingSession"
+          :is-submitting="sessionStore.isSubmitting"
+          :field-errors="sessionStore.fieldErrors"
+          :error-message="sessionStore.errorMessage"
+          @submit="handleSessionSubmit"
+          @cancel="closeSessionForm"
+        />
       </section>
 
       <section

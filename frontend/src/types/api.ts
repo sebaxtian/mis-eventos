@@ -119,3 +119,41 @@ export interface EventListQuery {
 }
 
 export type EventListResponse = PaginatedResponse<EventRead>
+
+export interface SessionRead {
+  id: number
+  event_id: number
+  title: string
+  description: string | null
+  speaker: string
+  start_time: string
+  end_time: string
+  capacity: number
+  registered_count: number
+  available_capacity: number
+  created_at: string
+  updated_at: string
+}
+
+export interface SessionListResponse {
+  items: SessionRead[]
+  total: number
+}
+
+export interface SessionCreatePayload {
+  title: string
+  speaker: string
+  description?: string | null
+  start_time: string
+  end_time: string
+  capacity: number
+}
+
+export interface SessionUpdatePayload {
+  title?: string
+  speaker?: string
+  description?: string | null
+  start_time?: string
+  end_time?: string
+  capacity?: number
+}

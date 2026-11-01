@@ -16,6 +16,7 @@ import EventsListView from '@/views/EventsListView.vue'
 import EventDetailView from '@/views/EventDetailView.vue'
 import EventFormView from '@/views/EventFormView.vue'
 import * as eventsService from '@/services/events'
+import * as sessionsService from '@/services/sessions'
 
 vi.mock('@/services/events', () => ({
   fetchEventsApi: vi.fn(),
@@ -26,12 +27,25 @@ vi.mock('@/services/events', () => ({
   uploadEventImageApi: vi.fn(),
 }))
 
+vi.mock('@/services/sessions', () => ({
+  fetchSessionsApi: vi.fn(),
+  fetchSessionByIdApi: vi.fn(),
+  createSessionApi: vi.fn(),
+  updateSessionApi: vi.fn(),
+  deleteSessionApi: vi.fn(),
+}))
+
 const mockedFetchEvents = vi.mocked(eventsService.fetchEventsApi)
 const mockedFetchEventById = vi.mocked(eventsService.fetchEventByIdApi)
 const mockedCreateEvent = vi.mocked(eventsService.createEventApi)
 const mockedUpdateEvent = vi.mocked(eventsService.updateEventApi)
 const mockedDeleteEvent = vi.mocked(eventsService.deleteEventApi)
 const mockedUploadImage = vi.mocked(eventsService.uploadEventImageApi)
+const mockedFetchSessions = vi.mocked(sessionsService.fetchSessionsApi)
+
+beforeEach(() => {
+  mockedFetchSessions.mockResolvedValue({ items: [], total: 0 })
+})
 
 const organizer: AuthUser = {
   id: 2,

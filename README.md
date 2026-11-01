@@ -4,7 +4,7 @@ Plataforma web para que la empresa **Mis Eventos** administre sus eventos de pri
 
 Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarrollador full stack), desarrollada con **Spec-Driven Development (SDD)**: la especificación precede al código y cada regla de negocio se cubre con tests.
 
-> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`), 1 (`auth`) y 2 (`events`) están implementados y validados. `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`; `events` aporta CRUD con estados, búsqueda trigrama, imágenes WebP y caché Redis. Los dominios `sessions`, `registrations` y `delivery` siguen pendientes. El producto completo no está terminado.
+> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`), 1 (`auth`), 2 (`events`) y 3 (`sessions`, v0.2) están implementados y validados. `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`; `events` aporta CRUD con estados, búsqueda trigrama, imágenes WebP y caché Redis; `sessions` aporta la agenda con ventana UTC, no solapamiento serializado con `SELECT ... FOR UPDATE`, capacidad por sesión, timeline y formulario. Los dominios `registrations` y `delivery` siguen pendientes. El producto completo no está terminado.
 
 ## Tabla de contenido
 
@@ -112,13 +112,13 @@ El trabajo avanza por dominios: cada uno se especifica, se aprueba, se implement
 |   0   | `platform`      | Implementada (v1.0)    | Implementada |
 |   1   | `auth`          | Implementada (v1.0)    | Implementada |
 |   2   | `events`        | Implementada (v1.0)    | Implementada |
-|   3   | `sessions`      | Pendiente de redacción | Pendiente    |
+|   3   | `sessions`      | Implementada (v0.2)    | Implementada |
 |   4   | `registrations` | Pendiente de redacción | Pendiente    |
 |   5   | `delivery`      | Pendiente de redacción | Pendiente    |
 
-El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform`, `auth` y `events` en [specs/platform/spec.md](specs/platform/spec.md), [specs/auth/spec.md](specs/auth/spec.md) y [specs/events/spec.md](specs/events/spec.md).
+El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform`, `auth`, `events` y `sessions` (v0.2, 2026-11-01) en [specs/platform/spec.md](specs/platform/spec.md), [specs/auth/spec.md](specs/auth/spec.md), [specs/events/spec.md](specs/events/spec.md) y [specs/sessions/spec.md](specs/sessions/spec.md).
 
-**Próximos pasos:** iniciar la especificación del dominio `sessions`. Antes de escribir código deben existir `specs/sessions/spec.md`, `specs/sessions/plan.md` y `specs/sessions/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
+**Próximos pasos:** especificar el dominio `registrations`. Antes de escribir código deben existir `specs/registrations/spec.md`, `specs/registrations/plan.md` y `specs/registrations/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
 
 ## Puesta en marcha
 
@@ -226,11 +226,26 @@ El Dominio 2 (`events`) se validó en su cierre con estas comprobaciones (result
 | Caché                 | Redis con prefijo `events:` por `scope`, TTL 60 s e invalidación en cada escritura             |
 | Medios                | Variantes WebP `400w`/`800w`/`1200w` sin EXIF servidas por Nginx con caché inmutable            |
 
-Los porcentajes corresponden a la última validación de `platform`, `auth` y `events` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+El Dominio 3 (`sessions`, v0.2) se validó en su cierre el 2026-11-01 con estas comprobaciones (resultados registrados en [MEMORY.md](MEMORY.md)):
 
-| Control pendiente          | Dominio responsable                                                                         |
-| -------------------------- | ------------------------------------------------------------------------------------------- |
-| Reglas de negocio críticas | Tests de capacidad concurrente y solapamiento de sesiones contra PostgreSQL en sus dominios |
+| Control               | Herramienta / resultado                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Tests de backend      | `pytest` contra PostgreSQL en contenedor: 98/98 (12 de `platform` + 31 de `auth` + 26 de `events` + 29 de `sessions`) |
+| Cobertura de backend  | 97 % con reporte XML (`backend/coverage.xml`)                                                  |
+| Tests de frontend     | Vitest: 54/54 (45 previos + 9 de `sessions`)                                                   |
+| Cobertura de frontend | 94.28 % de líneas                                                                              |
+| Tipos del frontend    | `vue-tsc` sin errores                                                                          |
+| Build de producción   | Vite minificado: 132 módulos, `SessionForm` en chunk diferido separado y sin source maps públicos |
+| Contrato de API       | OpenAPI con 5 operaciones de `sessions`, tag `sessions`, códigos `401/403/404/409/422` y sin `400` |
+| Migración             | `0004_create_sessions (head)` sobre PostgreSQL                                                 |
+| Concurrencia          | `pytest -k "ses_ac_08 or ses_ac_10 or ses_ac_30"` → 3/3, con `FOR UPDATE` sobre el evento (también en `DELETE`) |
+| E2E                   | Gateway Nginx con datos sembrados por API: catálogo, timeline, crear/editar/eliminar, permisos y `CANCELLED`; datos y claves Redis limpiados |
+
+Los porcentajes corresponden a la última validación de `platform`, `auth`, `events` y `sessions` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+
+| Control pendiente          | Dominio responsable                                                         |
+| -------------------------- | --------------------------------------------------------------------------- |
+| Reglas de negocio críticas | Tests de capacidad concurrente de inscripciones contra PostgreSQL (`registrations`) |
 
 ## Licencia
 

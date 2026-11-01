@@ -69,10 +69,7 @@ Itinerario interno de cada evento, incluidos los eventos en `DRAFT` para que el 
 - **Alcance Backend:** `Session` vinculada (uno a muchos) a un `Event`; ponente, horario (`start_time`, `end_time`) y capacidad propia.
 - **Reglas Críticas:** validación de `start_time < end_time` en el schema; validación de **no solapamiento** entre sesiones del mismo evento en la lógica de negocio, porque requiere consultar la base de datos; solo el Organizador dueño del evento (o el Admin) gestiona sus sesiones.
 - **Alcance Frontend:** línea de tiempo de sesiones en el detalle del evento, construida con Tailwind sin librerías de calendario (R4.3); formulario de sesión visible solo para quien puede gestionarla.
-- **Preguntas abiertas:**
-  - Borde del solapamiento (propuesta: intervalos semiabiertos `[start, end)`, sesiones consecutivas válidas).
-  - Si `session.capacity` debe ser ≤ `event.total_capacity`.
-  - Si se pueden crear o editar sesiones de eventos `CANCELLED`.
+- **Preguntas abiertas:** _(Resueltas en `specs/sessions/spec.md` §17–§18: intervalos semiabiertos `[start, end)` con consecutivas válidas y serialización por `SELECT ... FOR UPDATE` sobre el evento; `capacity` propia de sesión `1..100000` y ≤ `event.total_capacity` con cupos calculados por el backend; escrituras en `DRAFT`/`PUBLISHED` y `409` en `CANCELLED`; fechas UTC estrictas con rechazo de `naive`, ventana literal de `EVT-BR-05` sin cruce de medianoche, listado sin paginación, borrado físico `204` y frontend con timeline y formulario. Decisiones D1–D8 del 2026-10-31; Aprobada explícitamente por el usuario el 2026-10-31 (R1.8); implementación iniciada; enmienda v0.2 del 2026-11-01 con 30 criterios `SES-AC` (nuevos `SES-AC-29`, `404` en escrituras sobre sesión ajena/inexistente, y `SES-AC-30`, serialización de `DELETE` con `FOR UPDATE`), aprobada por el usuario el 2026-11-01; implementación TDD (`B1..B28`, `F1..F7`) y validación (`V1..V6`) completadas el 2026-11-01 con veredicto `¿pasa? sí` del `reviewer` (30/30 criterios `SES-AC`), spec `Implementada`.)_
 
 ### 1.4. Dominio: Inscripciones y Capacidad (`specs/registrations/`)
 
@@ -110,7 +107,7 @@ Principios transversales que aplican a **todas** las specs: R2 (aislamiento), R3
 | **0** | `specs/platform/`      | Plataforma                     | _(Ninguna)_                  | R2.1, R2.2, R3.6, R3.9, R5.7, R6 (422 en español)                                             | Minificación, lazy loading de rutas                 | — (resueltas en la arquitectura v1.1: UV, PostgreSQL en tests, TypeScript ligero) |
 | **1** | `specs/auth/`          | Autenticación, RBAC y Perfiles | `platform`                   | R5.1, R5.2, R5.3, R5.6, R5.8, R5.9                                                            | Roles, permisos por rol, gestión de perfiles        | — (resueltas en `specs/auth/spec.md` §12)                                 |
 | **2** | `specs/events/`        | Eventos y Catálogo             | `auth`                       | R3.6 (`pg_trgm`), R4.4 (caché Redis), R2.5 (cupos desde la API)                               | Imágenes WebP, lazy loading de componentes, caching | — (resueltas en `specs/events/spec.md` §12)                                      |
-| **3** | `specs/sessions/`      | Programación de Sesiones       | `events`                     | R3.4 (solapamiento), R5.3 (propiedad del evento)                                              | —                                                   | —                                                                        |
+| **3** | `specs/sessions/`      | Programación de Sesiones       | `events`                     | R3.4 (solapamiento), R5.3 (propiedad del evento)                                              | —                                                   | Resueltas en `specs/sessions/spec.md` §17–§18                            |
 | **4** | `specs/registrations/` | Inscripciones y Capacidad      | `auth`, `events`, `sessions` | R3.4 (límites y concurrencia), R3.6 (bloqueos en PostgreSQL), R5.4, R5.8, R4.4 (invalidación) | —                                                   | —                                                                        |
 | **5** | `specs/delivery/`      | Entrega                        | Todos                        | R3.9 (cobertura)                                                                              | —                                                   | —                                                                        |
 
@@ -157,6 +154,6 @@ Cada requisito de `docs/prueba_tecnica_desarrollador_fullstack.md` tiene un domi
 |   0   | `platform`      | Implementada           | 1.0     | 2026-10-31           |
 |   1   | `auth`          | Implementada           | 1.0     | 2026-10-31           |
 |   2   | `events`        | Implementada           | 1.0     | 2026-10-31           |
-|   3   | `sessions`      | Pendiente de redacción | —       | —                    |
+|   3   | `sessions`      | Implementada           | 0.2     | 2026-11-01           |
 |   4   | `registrations` | Pendiente de redacción | —       | —                    |
 |   5   | `delivery`      | Pendiente de redacción | —       | —                    |
