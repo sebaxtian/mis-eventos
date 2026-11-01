@@ -3,7 +3,7 @@
 | Campo                      | Valor                                                                                                                                                                  |
 | -------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **ID del dominio**         | `REG`                                                                                                                                                                  |
-| **Versión**                | 0.1                                                                                                                                                                    |
+| **Versión**                | 1.0                                                                                                                                                                    |
 | **Estado**                 | Implementada                                                                                                                                                           |
 | **Fecha**                  | 2026-11-01                                                                                                                                                             |
 | **Dependencias**           | `platform` (Dominio 0, v1.0), `auth` (Dominio 1, v1.0), `events` (Dominio 2, v1.0), `sessions` (Dominio 3, v0.2)                                                         |
@@ -648,6 +648,7 @@ Cobertura de criterios por tarea (resumen):
 | 0.1     | 2026-11-01 | Aprobación explícita del usuario ("Sí, apruebo"): Borrador → Aprobada. |
 | 0.1     | 2026-11-01 | Inicio de la implementación aprobado en la misma decisión: Aprobada → En implementación (Paso 6, TDD). |
 | 0.1     | 2026-11-01 | Implementación TDD completa (B1..B34, F1..F7) y validación (V1..V6) con veredicto ¿pasa? sí del reviewer (38/38 REG-AC): En implementación → Implementada. |
+| 1.0     | 2026-11-01 | Armonización con la entrega v1.0.0 por decisión del usuario (`DLV-D3`): la cabecera pasa de `0.1` a `1.0`; sin cambios de comportamiento ni criterios, historial de enmiendas conservado y referencia a la etiqueta `v0.5.0-registrations`, que registra la entrega del dominio. |
 
 ## 20. Referencias normativas
 

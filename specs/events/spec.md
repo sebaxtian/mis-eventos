@@ -466,3 +466,4 @@ Ninguna.
 | 1.0     | 2026-10-31 | Aprobación explícita del usuario ("Apruebo la spec de events, proceda"): Borrador → Aprobada.                       |
 | 1.0     | 2026-10-31 | Autorización del usuario para iniciar la implementación: Aprobada → En implementación (Paso 6, TDD).                |
 | 1.0     | 2026-10-31 | Implementación TDD completa (B1..B25, F1..F6) y validación del `reviewer` (`¿pasa? sí`, 30/30 criterios `EVT-AC-01..30` verificados): `En implementación → Implementada`. |
+| 1.0     | 2026-11-01 | Armonización de versiones con la entrega v1.0.0 por decisión del usuario (`DLV-D3`): se mantiene la versión `1.0`; sin cambios de contenido, reglas, criterios ni estado. |

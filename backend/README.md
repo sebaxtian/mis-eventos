@@ -91,6 +91,40 @@ backend/
    uv run uvicorn app.main:app --reload
    ```
 
+## Primer administrador
+
+El arranque de la API siembra el primer `ADMIN` a partir de las variables `BOOTSTRAP_ADMIN_EMAIL`, `BOOTSTRAP_ADMIN_PASSWORD` y `BOOTSTRAP_ADMIN_FULL_NAME`, después de aplicar las migraciones y de forma idempotente.
+
+### Preparar el entorno
+
+- Si **no** existe `.env`, cópialo desde `.env.example`.
+- Si **ya** existe `.env`, **complétalo solo por append** con las claves de aplicación que falten, **sin sobrescribir ni eliminar** ninguna variable existente. Las variables de OpenCode/MCP (`CONTEXT7_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, `DEV_DATABASE_URI` y `BROWSER_PATH`) no se modifican nunca. Está prohibido ejecutar `cp .env.example .env` sobre un `.env` existente.
+- Genera los secretos con un CSPRNG. Por ejemplo:
+
+  ```bash
+  python -c "import secrets; print(secrets.token_urlsafe(48))"   # JWT_SECRET_KEY (mínimo 32 caracteres)
+  python -c "import secrets; print(secrets.token_urlsafe(24))"   # POSTGRES_PASSWORD (distinto de "postgres")
+  ```
+
+### Variables de bootstrap
+
+| Variable | Uso |
+| --- | --- |
+| `BOOTSTRAP_ADMIN_EMAIL` | Email del primer administrador (sintético; no uses datos personales reales). |
+| `BOOTSTRAP_ADMIN_PASSWORD` | Contraseña inicial del administrador. |
+| `BOOTSTRAP_ADMIN_FULL_NAME` | Nombre visible del administrador. |
+
+`BOOTSTRAP_ADMIN_EMAIL` y `BOOTSTRAP_ADMIN_PASSWORD` son obligatorios **juntos**: si solo se define uno de los dos, el arranque falla con un mensaje genérico en español que no expone la contraseña ni la clave.
+
+### Comportamiento
+
+- **Idempotencia:** si el email ya existe, el bootstrap no cambia su rol ni su contraseña; dos arranques consecutivos no duplican el `ADMIN`.
+- **Producción:** con `APP_ENV=production` y el placeholder `change-me-in-production-min-32-chars`, el arranque falla; con una `JWT_SECRET_KEY` real de al menos 32 caracteres, arranca con normalidad.
+- **Rotación de secretos:** cambia `JWT_SECRET_KEY` (invalida los tokens emitidos) y reinicia la API; el bootstrap no reescribe la contraseña de una cuenta ya existente, de modo que la contraseña del administrador se cambia por los mecanismos de la aplicación.
+- **Datos locales:** `docker compose down -v` elimina los volúmenes `pg_data` y `media`; úsalo solo en entornos de verificación.
+
+Consulta la nota de release en [CHANGELOG.md](../CHANGELOG.md).
+
 ## Endpoints principales
 
 | Método   | Ruta                            | Acceso                                      |
@@ -129,6 +163,7 @@ El contrato OpenAPI declara los códigos de error de cada operación (`400`, `40
 - Limpieza de metadatos EXIF y orientación aplicada con `ImageOps.exif_transpose`.
 - Tres variantes WebP por ancho (`400w`, `800w`, `1200w`) sin reescalar hacia arriba.
 - Los archivos se guardan en `MEDIA_ROOT/events/` y se sirven en `/api/media/events/` a través de Nginx, con caché inmutable de un año.
+- El directorio `/api/media/events/` **no es listable** (`autoindex off`): responde **403/404 según exista el directorio**; en ningún caso devuelve un índice de archivos.
 
 ## Sesiones
 
@@ -162,7 +197,20 @@ uv run pytest
 uv run pytest --cov=app --cov-report=xml --cov-report=term-missing
 ```
 
-Última validación registrada del Dominio 4 (`registrations`, 2026-11-01): **134 passed**, 0 failed, cobertura total **97 %** con reporte XML en `backend/coverage.xml`. La cobertura de `app/registrations/` es `models` 100 %, `schemas` 100 %, `dependencies` 100 %, `router` 100 % y `service` 98 %. La concurrencia se verificó con `uv run pytest -k "reg_ac_04 or reg_ac_16"` → **2 passed** en **3 ejecuciones** consecutivas (último cupo de evento y de sesión), y la integración de hooks con `uv run pytest -k "reg_ac_33 or ses_ac_03 or evt_ac_15"` → **3 passed**. La migración aplicada es `0005_create_registrations (head)`.
+### Entorno local de pruebas (`backend/.env`)
+
+- `docker compose` lee el `.env` **raíz** y usa los hosts internos `db` y `redis`.
+- Para ejecutar `pytest` **desde `backend/`**, `app/core/config.py` lee `backend/.env`. Si no existe, crea uno local con las **mismas credenciales** que el `.env` raíz pero con `DATABASE_URL` y `TEST_DATABASE_URL` apuntando a `127.0.0.1` (puertos publicados) y `REDIS_URL=redis://127.0.0.1:6379/0`.
+- `backend/.env` es **local, ignorado por Git** (la regla `.env` de `.gitignore` cubre cualquier nivel) y **no** debe versionarse ni compartirse; se regenera a mano cuando roten las credenciales del `.env` raíz.
+- No incluye variables de OpenCode/MCP (`CONTEXT7_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, `DEV_DATABASE_URI`, `BROWSER_PATH`) ni `BOOTSTRAP_ADMIN_*`.
+- **No** sobrescribas el `.env` raíz para esto: el stack de Docker Compose debe seguir leyendo sus hosts internos.
+
+### Validación de release v1.0.0 (2026-11-01)
+
+- **`pytest`:** **134 passed**, 0 failed, sin `skip`/`xfail` injustificados.
+- **Cobertura:** **96,97 %** total (el reporte `term-missing` muestra 97 %), con reporte XML regenerado en `backend/coverage.xml`.
+- **Migración aplicada:** `0005_create_registrations (head)`.
+- Detalle del alcance y de la validación completa en [CHANGELOG.md](../CHANGELOG.md).
 
 ## Documentación OpenAPI
 

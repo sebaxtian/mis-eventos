@@ -152,14 +152,16 @@ npx vitest run --coverage
 
 El script `pretest` instala las dependencias si falta `node_modules`. La suite usa `jsdom` y `@vue/test-utils`, con `createMemoryHistory` para las pruebas de router.
 
-Última validación registrada del Dominio 4 (`registrations`, 2026-11-01):
+Validación de release v1.0.0 (2026-11-01):
 
 | Control               | Resultado                                                        |
 | --------------------- | ---------------------------------------------------------------- |
-| Tests                 | **62 passed** en 16 archivos (54 previos + 8 de `registrations`)  |
-| Cobertura             | **95.19 %** statements/lines, 86.39 % branches, 94.35 % functions |
+| Tests                 | **62 passed** en 16 archivos                                      |
+| Cobertura             | **95,19 %** sentencias/líneas, 86,39 % ramas, 94,35 % funciones   |
 | Tipos                 | `vue-tsc --noEmit` sin errores                                   |
-| Build                 | **136 módulos**; `EventRegistrationsList-B3wnZ5i7.js` (4.00 kB) como chunk diferido separado, artefactos minificados y sin `.map` públicos |
+| Build                 | **136 módulos**, 19 chunks JS con `EventForm`, `SessionForm` y `EventRegistrationsList` en chunks diferidos, artefactos minificados y **0 archivos `.map`** |
+
+Detalle del alcance y de la validación completa en [CHANGELOG.md](../CHANGELOG.md).
 
 ### Verificación de tipos (TypeScript / Vue)
 

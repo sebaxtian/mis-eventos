@@ -3,7 +3,7 @@
 | Campo                  | Valor                                 |
 | ---------------------- | ------------------------------------- |
 | **ID del dominio**     | `REG`                                 |
-| **Spec de referencia** | `specs/registrations/spec.md` v0.1    |
+| **Spec de referencia** | `specs/registrations/spec.md` v1.0    |
 | **Plan de referencia** | `specs/registrations/plan.md`         |
 | **Fecha**              | 2026-11-01                            |
 

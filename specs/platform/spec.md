@@ -177,3 +177,4 @@ Cada criterio tiene al menos un test cuyo nombre incluye su ID (R1.5, R1.9).
 | 0.1     | 2026-10-31 | Especificación completa del dominio `platform` en estado `Borrador` con las 4 decisiones resueltas por el usuario.              |
 | 1.0     | 2026-10-31 | Aprobación explícita del usuario (`Borrador → Aprobada`) y paso inmediato a `En implementación` para iniciar el Paso 6 (TDD). |
 | 1.0     | 2026-10-31 | Validación del `reviewer` (`¿pasa? sí`, 18/18 criterios `PLAT-AC-01..18` verificados en verde) y cierre en estado `Implementada`. |
+| 1.0     | 2026-11-01 | Armonización de versiones con la entrega v1.0.0 por decisión del usuario (`DLV-D3`): se mantiene la versión `1.0`; sin cambios de contenido, reglas, criterios ni estado. |

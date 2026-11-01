@@ -443,3 +443,4 @@ Todas las decisiones se resolvieron con el usuario el **2026-10-31** y se aplica
 | 1.0     | 2026-10-31 | Aprobación explícita del usuario ("Apruebo la spec de auth") y paso a estado Aprobada; sin cambios de contenido respecto a 0.1. |
 | 1.0     | 2026-10-31 | Paso a En implementación tras la aprobación y la verificación de que no quedan decisiones bloqueantes; inicio del TDD por B1. |
 | 1.0     | 2026-10-31 | Validación del reviewer (¿pasa? sí, 31/31 criterios AUTH-AC-01..31 verificados en verde) y cierre en estado Implementada. |
+| 1.0     | 2026-11-01 | Armonización de versiones con la entrega v1.0.0 por decisión del usuario (`DLV-D3`): se mantiene la versión `1.0`; sin cambios de contenido, reglas, criterios ni estado. |

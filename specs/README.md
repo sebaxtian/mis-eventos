@@ -1,6 +1,6 @@
 # Plan de Especificaciones Funcionales (SDD) - Mis Eventos
 
-**Versión:** 1.4
+**Versión:** 1.9
 **Fecha:** 1 de noviembre de 2026
 **Estado:** Vigente
 **Metodología:** Spec-Driven Development (SDD)
@@ -82,13 +82,18 @@ Motor transaccional de la plataforma, susceptible a errores de concurrencia.
 
 ### 1.5. Dominio: Entrega (`specs/delivery/`)
 
-Checklist de cierre con los entregables de la prueba técnica que no pertenecen a un dominio funcional.
+Cierre documental y de verificación final que empaqueta los cinco dominios anteriores como **release v1.0.0**. No añade funcionalidad: versiona, valida, asegura y documenta lo ya construido.
 
-- README de `backend/` y de `frontend/` (configurar, ejecutar, probar).
-- Documentación de la estructura del frontend (componentes, rutas, stores).
-- Reportes de cobertura de backend y frontend.
-- Verificación de la documentación OpenAPI.
-- `docker compose up` levanta todo el sistema desde cero con `.env.example`.
+- **Alcance Versiones:** `1.0.0` coherente en `backend/pyproject.toml`, `backend/uv.lock`, `frontend/package.json`, `frontend/package-lock.json` y `info.version` del OpenAPI, más etiqueta anotada `v1.0.0`; lockfiles regenerados con `uv lock` y `npm version --no-git-tag-version`.
+- **Alcance Entorno:** `.env` raíz **completado por append idempotente** sobre el archivo existente, sin sobrescribir ni eliminar claves previas (se preservan `CONTEXT7_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, `DEV_DATABASE_URI` y `BROWSER_PATH` de OpenCode/MCP), añadiendo solo las claves de aplicación ausentes con `POSTGRES_PASSWORD` real, `JWT_SECRET_KEY` de ≥32 caracteres por CSPRNG y `BOOTSTRAP_ADMIN_*`; ignorado por Git; rechazo del placeholder con `APP_ENV=production`; primer `ADMIN` idempotente y documentado en los READMEs.
+- **Alcance Validación:** `pytest` con cobertura XML, `Vitest` con cobertura, `vue-tsc --noEmit`, build minificado sin source maps, `docker compose down -v && docker compose up -d --build`, `alembic current` en `0005_create_registrations (head)` y verificación de las rutas del gateway (`/`, `/api/health`, `/api/docs`, `/api/openapi.json`, `/api/media/`).
+- **Alcance E2E:** un único recorrido transversal con `ADMIN` + `ORGANIZER` + `ATTENDEE` (evento → imagen WebP → publicación → sesión → inscripción → cupo agotado → cascada al cancelar → limpieza de datos, media y claves Redis).
+- **Alcance Seguridad:** revisión final de secretos, `.env` ignorado, CORS cerrado, ausencia de `v-html`, source maps y datos personales, y Redis prescindible verificado en runtime.
+- **Alcance Documentación:** estados a `Implementada`, retirada de las frases de trabajo en curso, cifras de cobertura fechadas y nota de release `v1.0.0`.
+- **Decisiones resueltas (2026-11-01):** `DLV-D1` nota de release en `CHANGELOG.md` en la raíz con la sección `[1.0.0] - 2026-11-01`; `DLV-D2` R1.5 se satisface con checklist de comandos reproducibles, evidencia registrada y tests reutilizados; `DLV-D3` las seis specs de dominio se armonizan a `1.0` y `delivery` queda en `1.1` por la enmienda del `.env` aprobada después de su aprobación (R1.8), conservando el historial de enmiendas y su registro en documentación, memoria, commits y etiquetas; `DLV-D4` endurecimiento de infraestructura (puertos `5432`/`6379`, cabeceras de seguridad en Nginx y `restart:`) queda fuera de alcance y se declara como limitación del entorno de desarrollo en `CHANGELOG.md`. Sin decisiones bloqueantes (R1.8).
+- **Aprobación y enmienda v1.1 (2026-11-01):** el usuario aprobó explícitamente la spec con la frase «Apruebo y autorizo iniciar (Recomendada). Marco la spec como Aprobada v1.0 en spec.md y specs/README.md §5, registro la aprobación y fecha en MEMORY.md, y la paso a En implementación para arrancar las tareas V1..V35 con el implementer.», condicionada a **no modificar ni eliminar** las variables ya presentes en el `.env` (claves de OpenCode/MCP). Antes de registrar la aprobación se enmendó la spec a **v1.1** (R1.4, R1.6): `DLV-BR-03`, `DLV-AC-05` y `DLV-AC-07` exigen un `.env` completado por **append idempotente** y la conservación de las claves previas. Transiciones `Borrador → Aprobada → En implementación` con la misma fecha; estado actual **`En implementación` (v1.1)**.
+- **Validación de release (2026-11-01):** ejecutada por el `implementer` con `pytest` **134/134** (cobertura **96,97 %**, 97 % en el reporte `term`, `coverage.xml` regenerado), `Vitest` **62/62 en 16 archivos** (95,19 % sentencias/líneas, 86,39 % ramas, 94,35 % funciones), `vue-tsc --noEmit` sin errores, build de **136 módulos** sin `.map`, `alembic current` en `0005_create_registrations (head)`, stack desde cero con **5 servicios** operativos, contrato OpenAPI **idéntico al baseline salvo `info.version = "1.0.0"`**, Redis `degraded` con `/api/health` 200, E2E transversal con **409** por cupo agotado, cascada al cancelar y limpieza total (`users/events/sessions/registrations = 0`, `DBSIZE = 0`, media 0), y `.env` completado por append con huellas de las variables de OpenCode/MCP intactas.
+- **Cierre del dominio (2026-11-01):** primera auditoría del `reviewer` con veredicto **`¿pasa? no`** por `DLV-AC-11`/`DLV-BR-05` (desde `backend/`, `pytest` daba 4 passed y 130 errors por autenticación de PostgreSQL al no existir `backend/.env`, y con el `.env` raíz inyectado fallaban 2 por `REDIS_URL` sin resolver desde el host). El usuario aprobó el enfoque **entorno local + documentación** sin tocar código ni specs cerradas: `backend/.env` local **ignorado por Git** con 7 claves (`DATABASE_URL`, `TEST_DATABASE_URL`, `REDIS_URL`, `APP_ENV`, `JWT_SECRET_KEY`, `JWT_EXPIRE_MINUTES`, `MEDIA_ROOT`) apuntando a `127.0.0.1`, sin variables de OpenCode/MCP ni `BOOTSTRAP_ADMIN_*`; `backend/Dockerfile` con rutas explícitas y `.env`/`.env.local` en `backend/.dockerignore`. Re-auditoría con el comando literal documentado: **134 passed**, 0 failed, cobertura `term` **97 %** (`coverage.xml` con `line-rate` 96,97 %, 1598/1648) y concurrencia `5 passed, 129 deselected`. Veredicto final **`¿pasa? sí`** (32/32 `DLV-AC`), con la etiqueta anotada `v1.0.0` (`V7`) pendiente sobre el commit de cierre.
 
 ---
 
@@ -105,7 +110,7 @@ Principios transversales que aplican a **todas** las specs: R2 (aislamiento), R3
 | **2** | `specs/events/`        | Eventos y Catálogo             | `auth`                       | R3.6 (`pg_trgm`), R4.4 (caché Redis), R2.5 (cupos desde la API)                               | Imágenes WebP, lazy loading de componentes, caching | — (resueltas en `specs/events/spec.md` §12)                                      |
 | **3** | `specs/sessions/`      | Programación de Sesiones       | `events`                     | R3.4 (solapamiento), R5.3 (propiedad del evento)                                              | —                                                   | Resueltas en `specs/sessions/spec.md` §17–§18                            |
 | **4** | `specs/registrations/` | Inscripciones y Capacidad      | `auth`, `events`, `sessions` | R3.4 (límites y concurrencia), R3.6 (bloqueos en PostgreSQL), R5.4, R5.8, R4.4 (invalidación) | —                                                   | Resueltas en `specs/registrations/spec.md` §14 (D1–D14)                  |
-| **5** | `specs/delivery/`      | Entrega                        | Todos                        | R3.9 (cobertura)                                                                              | —                                                   | —                                                                        |
+| **5** | `specs/delivery/`      | Entrega                        | Todos                        | R3.9 (cobertura)                                                                              | —                                                   | Resueltas (DLV-D1–DLV-D4) en `specs/delivery/spec.md` §8                |
 
 ---
 
@@ -147,9 +152,9 @@ Cada requisito de `docs/prueba_tecnica_desarrollador_fullstack.md` tiene un domi
 
 | Orden | Dominio         | Estado                 | Versión | Última actualización |
 | :---: | --------------- | ---------------------- | ------- | -------------------- |
-|   0   | `platform`      | Implementada           | 1.0     | 2026-10-31           |
-|   1   | `auth`          | Implementada           | 1.0     | 2026-10-31           |
-|   2   | `events`        | Implementada           | 1.0     | 2026-10-31           |
-|   3   | `sessions`      | Implementada           | 0.2     | 2026-11-01           |
-|   4   | `registrations` | Implementada           | 0.1     | 2026-11-01           |
-|   5   | `delivery`      | Pendiente de redacción | —       | —                    |
+|   0   | `platform`      | Implementada           | 1.0     | 2026-11-01           |
+|   1   | `auth`          | Implementada           | 1.0     | 2026-11-01           |
+|   2   | `events`        | Implementada           | 1.0     | 2026-11-01           |
+|   3   | `sessions`      | Implementada           | 1.0     | 2026-11-01           |
+|   4   | `registrations` | Implementada           | 1.0     | 2026-11-01           |
+|   5   | `delivery`      | Implementada           | 1.1     | 2026-11-01           |

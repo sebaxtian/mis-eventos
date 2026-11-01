@@ -3,7 +3,7 @@
 | Campo                      | Valor                                                                                                  |
 | -------------------------- | ------------------------------------------------------------------------------------------------------ |
 | **ID del dominio**         | `SES`                                                                                                  |
-| **Versión**                | 0.2                                                                                                    |
+| **Versión**                | 1.0                                                                                                    |
 | **Estado**                 | Implementada                                                                                           |
 | **Fecha**                  | 2026-10-31                                                                                             |
 | **Dependencias**           | `platform` (Dominio 0, v1.0), `auth` (Dominio 1, v1.0), `events` (Dominio 2, v1.0)                      |
@@ -530,6 +530,7 @@ Cobertura de criterios por tarea (resumen):
 | 0.2     | 2026-11-01 | Enmienda por hallazgos de QA: nuevos criterios SES-AC-29 (404 en escrituras sobre sesión ajena/inexistente) y SES-AC-30 (serialización de DELETE con FOR UPDATE) y tareas B27/B28. |
 | 0.2     | 2026-11-01 | Aprobación explícita de la enmienda v0.2 por el usuario ("Sí, apruebo la v0.2"): se retoma la implementación de B27/B28 y la validación. |
 | 0.2     | 2026-11-01 | Implementación TDD completa (B1..B28, F1..F7) y validación (V1..V6) con veredicto ¿pasa? sí del reviewer (30/30 SES-AC): En implementación → Implementada. |
+| 1.0     | 2026-11-01 | Armonización con la entrega v1.0.0 por decisión del usuario (`DLV-D3`): la cabecera pasa de `0.2` a `1.0`; sin cambios de comportamiento ni criterios, historial de enmiendas conservado y referencia a la etiqueta `v0.4.0-sessions`, que registra la entrega del dominio. |
 
 ## 21. Referencias normativas
 

@@ -3,7 +3,7 @@
 | Campo                  | Valor                            |
 | ---------------------- | -------------------------------- |
 | **ID del dominio**     | `SES`                            |
-| **Spec de referencia** | `specs/sessions/spec.md` v0.2    |
+| **Spec de referencia** | `specs/sessions/spec.md` v1.0    |
 | **Plan de referencia** | `specs/sessions/plan.md`         |
 | **Fecha**              | 2026-10-31                       |
 

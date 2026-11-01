@@ -3,7 +3,7 @@
 | Campo                  | Valor                          |
 | ---------------------- | ------------------------------ |
 | **ID del dominio**     | `SES`                          |
-| **Spec de referencia** | `specs/sessions/spec.md` v0.2  |
+| **Spec de referencia** | `specs/sessions/spec.md` v1.0  |
 | **Plan de referencia** | `specs/sessions/plan.md`       |
 
 > Ninguna tarea empieza hasta que la spec esté _Aprobada_ (R1.8). Cada tarea sigue el ciclo test → rojo → implementación mínima → verde → refactor (R3.1). El rojo debe fallar por la aserción esperada, no por un error de import, sintaxis o configuración (R3.2). Las tareas están ordenadas por dependencia real: cada una solo puede empezar cuando sus predecesoras estén en verde.
