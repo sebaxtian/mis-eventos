@@ -4,7 +4,7 @@ Plataforma web para que la empresa **Mis Eventos** administre sus eventos de pri
 
 Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarrollador full stack), desarrollada con **Spec-Driven Development (SDD)**: la especificación precede al código y cada regla de negocio se cubre con tests.
 
-> **Estado:** entrega formal **v1.0.0** de la prueba técnica, con los **seis dominios** implementados y validados (`platform`, `auth`, `events`, `sessions` y `registrations` en v1.0, y `delivery` en v1.1). El código declara `1.0.0` en `backend/pyproject.toml`, en los manifiestos del frontend y en `info.version` del OpenAPI, y la release se documenta en [CHANGELOG.md](CHANGELOG.md) con la sección `[1.0.0] - 2026-11-01`. La validación de release se ejecutó el 2026-11-01 (backend 134/134 con 96,97 % de cobertura, frontend 62/62 con 95,19 %, build de 136 módulos sin source maps, E2E transversal y limpieza total), y la auditoría del `reviewer` cerró con veredicto `¿pasa? sí`; queda pendiente la etiqueta anotada `v1.0.0`.
+> **Estado:** entrega formal **v1.0.0** de la prueba técnica, con los **seis dominios** implementados y validados (`platform`, `auth`, `events`, `sessions` y `registrations` en v1.0, y `delivery` en v1.1). El código declara `1.0.0` en `backend/pyproject.toml`, en los manifiestos del frontend y en `info.version` del OpenAPI, y la release se documenta en [CHANGELOG.md](CHANGELOG.md) con la sección `[1.0.0] - 2026-11-01`. La validación de release se ejecutó el 2026-11-01 (backend 134/134 con 96,97 % de cobertura, frontend 62/62 con 95,19 %, build de 136 módulos sin source maps, E2E transversal y limpieza total), y la auditoría del `reviewer` cerró con veredicto `¿pasa? sí`; la etiqueta anotada `v1.0.0` está publicada.
 
 ## Tabla de contenido
 
@@ -15,6 +15,7 @@ Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarro
 - [Metodología SDD](#metodología-sdd)
 - [Estado del proyecto](#estado-del-proyecto)
 - [Puesta en marcha](#puesta-en-marcha)
+- [Manual de usuario](#manual-de-usuario)
 - [Entorno de desarrollo (OpenCode)](#entorno-de-desarrollo-opencode)
 - [Calidad](#calidad)
 - [Licencia](#licencia)
@@ -79,7 +80,7 @@ Detalle completo en [docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Event
 ├── frontend/           SPA Vue 3
 ├── infra/              Configuración de Nginx y de PostgreSQL para los contenedores
 ├── specs/              Índice, plantillas y una carpeta por dominio
-├── docs/               Requisitos, arquitectura y constitución
+├── docs/               Requisitos, arquitectura, constitución y manual de usuario
 ├── docker-compose.yml  Orquestación de gateway, web, api, db, redis y volumen media
 ├── AGENTS.md           Contexto y reglas para agentes de OpenCode
 ├── MEMORY.md           Bitácora de decisiones y progreso
@@ -102,6 +103,7 @@ La regla de oro: **el código se subordina a la especificación**. Si el código
 | [specs/\_template/](specs/_template/)        | Plantillas de `spec.md`, `plan.md` y `tasks.md`       |
 | [MEMORY.md](MEMORY.md)                       | Decisiones tomadas y pendientes, tropiezos y bitácora |
 | [AGENTS.md](AGENTS.md)                       | Guía operativa para agentes de OpenCode               |
+| [docs/manual-de-usuario.md](docs/manual-de-usuario.md) | Manual funcional de usuario paso a paso por rol (con capturas y versión HTML imprimible) |
 
 ## Estado del proyecto
 
@@ -118,7 +120,7 @@ El trabajo avanza por dominios: cada uno se especifica, se aprueba, se implement
 
 El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones de `platform`, `auth`, `events`, `sessions` y `registrations` (v1.0) y de `delivery` (v1.1, auditada por el `reviewer` con veredicto `¿pasa? sí`) están en [specs/platform/spec.md](specs/platform/spec.md), [specs/auth/spec.md](specs/auth/spec.md), [specs/events/spec.md](specs/events/spec.md), [specs/sessions/spec.md](specs/sessions/spec.md), [specs/registrations/spec.md](specs/registrations/spec.md) y [specs/delivery/spec.md](specs/delivery/spec.md).
 
-**Próximos pasos:** único control pendiente de la entrega: crear la etiqueta anotada `v1.0.0` sobre el commit de cierre y publicar [CHANGELOG.md](CHANGELOG.md) como nota de release.
+**Próximos pasos:** entrega cerrada. La etiqueta anotada `v1.0.0` está publicada sobre el commit de cierre y [CHANGELOG.md](CHANGELOG.md) es la nota de release.
 
 ## Puesta en marcha
 
@@ -166,6 +168,13 @@ La configuración se toma de un `.env` local creado a partir de `.env.example`.
 - Las variables de los servidores MCP de OpenCode (`CONTEXT7_API_KEY`, `GITHUB_PERSONAL_ACCESS_TOKEN`, `BROWSER_PATH` y `DEV_DATABASE_URI`) se conservan tal cual; sus valores reales solo viven en `.env` y no se documentan aquí.
 
 > Los READMEs de `backend/` y `frontend/` recogen la documentación operativa de cada parte. La estructura final del frontend, el procedimiento del primer administrador y las cifras de cobertura de la release están documentados en ellos y en [CHANGELOG.md](CHANGELOG.md).
+
+## Manual de usuario
+
+El recorrido funcional paso a paso de la aplicación web para cada rol (**Visitante**, **Asistente (`ATTENDEE`)**, **Organizador (`ORGANIZER`)** y **Administrador (`ADMIN`)**), con capturas reales de la interfaz, matriz de permisos y guía de solución de problemas, está disponible en dos formatos:
+
+- **Markdown (con capturas en `docs/img/manual/`):** [docs/manual-de-usuario.md](docs/manual-de-usuario.md)
+- **HTML autocontenido e imprimible (A4 / PDF):** [docs/manual-de-usuario.html](docs/manual-de-usuario.html)
 
 ## Entorno de desarrollo (OpenCode)
 
@@ -281,7 +290,7 @@ Advertencias no bloqueantes de `pytest`: deprecación de `starlette.testclient` 
 
 Los porcentajes por dominio corresponden a la última validación registrada de `platform`, `auth`, `events`, `sessions` y `registrations` en [MEMORY.md](MEMORY.md); las cifras de la release v1.0.0 son las de la corrida del 2026-11-01. La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
 
-La capacidad concurrente de inscripciones quedó cubierta en `registrations` (`REG-AC-04` y `REG-AC-16`, 3/3). Queda pendiente la etiqueta anotada `v1.0.0`.
+La capacidad concurrente de inscripciones quedó cubierta en `registrations` (`REG-AC-04` y `REG-AC-16`, 3/3). La etiqueta anotada `v1.0.0` está publicada.
 
 ## Licencia
 

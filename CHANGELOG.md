@@ -4,6 +4,12 @@ Todas las versiones relevantes de **Mis Eventos** se documentan en este archivo.
 
 El formato sigue [Keep a Changelog](https://keepachangelog.com/es-ES/1.1.0/) y el versionado semántico. Las cifras de validación corresponden a la última corrida registrada en la fecha indicada.
 
+## [Unreleased]
+
+### Añadido
+
+- Manual de usuario v1.0 en `docs/manual-de-usuario.md`, con 13 capturas reales en `docs/img/manual/` y versión HTML autocontenida e imprimible en `docs/manual-de-usuario.html`; enlazado desde `README.md`.
+
 ## [1.0.0] - 2026-11-01
 
 Primera entrega formal de la prueba técnica. El sistema queda empaquetado como un entorno reproducible con Docker Compose, con las suites de backend y frontend en verde, el contrato OpenAPI congelado y un recorrido E2E transversal verificado.
