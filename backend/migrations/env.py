@@ -4,6 +4,7 @@ from sqlalchemy import engine_from_config, pool
 from sqlmodel import SQLModel
 from app.core.config import settings
 from app.users import models  # noqa: F401  (register SQLModel metadata)
+from app.events import models  # noqa: F401  (register SQLModel metadata)
 
 config = context.config
 

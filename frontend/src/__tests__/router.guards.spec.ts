@@ -82,7 +82,7 @@ describe('Vue Router lazy loading and UX navigation guards', () => {
     if (existsSync(distAssetsDir)) {
       const files = readdirSync(distAssetsDir)
       expect(files.some((f) => f.endsWith('.map'))).toBe(false)
-      expect(files.some((f) => f.startsWith('HomePlaceholderView-'))).toBe(true)
+      expect(files.some((f) => f.startsWith('EventsListView-'))).toBe(true)
       expect(files.some((f) => f.startsWith('LoginPlaceholderView-'))).toBe(true)
       expect(files.some((f) => f.startsWith('AdminPlaceholderView-'))).toBe(true)
     }

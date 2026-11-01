@@ -70,3 +70,52 @@ export interface HealthResponse {
   database: 'ok'
   redis: 'ok' | 'degraded'
 }
+
+export type EventStatus = 'DRAFT' | 'PUBLISHED' | 'CANCELLED'
+
+export interface EventImageUrls {
+  w400: string
+  w800: string
+  w1200: string
+}
+
+export interface EventRead {
+  id: number
+  title: string
+  description: string
+  date: string
+  total_capacity: number
+  registered_count: number
+  available_capacity: number
+  status: EventStatus
+  organizer_id: number
+  image_urls: EventImageUrls | null
+  created_at: string
+  updated_at: string
+}
+
+export interface EventCreatePayload {
+  title: string
+  description: string
+  date: string
+  total_capacity: number
+  status?: 'DRAFT' | 'PUBLISHED'
+}
+
+export interface EventUpdatePayload {
+  title?: string
+  description?: string
+  date?: string
+  total_capacity?: number
+  status?: EventStatus
+}
+
+export interface EventListQuery {
+  page?: number
+  size?: number
+  search?: string
+  status?: EventStatus
+  mine?: boolean
+}
+
+export type EventListResponse = PaginatedResponse<EventRead>

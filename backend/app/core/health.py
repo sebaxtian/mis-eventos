@@ -7,6 +7,7 @@ from sqlalchemy.exc import SQLAlchemyError
 from sqlmodel import Session
 from app.core.cache import CacheClient, get_cache_client
 from app.core.database import get_session
+from app.core.exceptions import error_responses
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api", tags=["health"])
@@ -18,7 +19,11 @@ class HealthResponse(BaseModel):
     redis: Literal["ok", "degraded"]
 
 
-@router.get("/health", response_model=HealthResponse)
+@router.get(
+    "/health",
+    response_model=HealthResponse,
+    responses=error_responses(503),
+)
 def get_health(
     session: Session = Depends(get_session),
     cache: CacheClient = Depends(get_cache_client),

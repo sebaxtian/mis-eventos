@@ -5,6 +5,7 @@ from sqlmodel import Session
 
 from app.auth.dependencies import require_admin
 from app.core.database import get_session
+from app.core.exceptions import error_responses
 from app.core.pagination import PaginatedResponse, build_paginated_response
 from app.users.models import User
 from app.users.schemas import AdminUserUpdateRequest, UserListParams, UserRead
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/api/users", tags=["users"])
 @router.get(
     "",
     response_model=PaginatedResponse[UserRead],
+    responses=error_responses(401, 403, 422),
 )
 def read_users(
     params: UserListParams = Depends(),
@@ -38,6 +40,7 @@ def read_users(
 @router.get(
     "/{user_id}",
     response_model=UserRead,
+    responses=error_responses(401, 403, 404, 422),
 )
 def read_user(
     user_id: int = Path(ge=1),
@@ -57,6 +60,7 @@ def read_user(
 @router.patch(
     "/{user_id}",
     response_model=UserRead,
+    responses=error_responses(400, 401, 403, 404, 409, 422),
 )
 def update_user(
     payload: AdminUserUpdateRequest,

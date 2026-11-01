@@ -14,6 +14,7 @@ from app.auth.service import (
     register_user,
 )
 from app.core.database import get_session
+from app.core.exceptions import error_responses
 from app.users.models import User
 from app.users.schemas import UpdateMeRequest, UserRead
 
@@ -24,6 +25,7 @@ router = APIRouter(prefix="/api/auth", tags=["auth"])
     "/register",
     response_model=UserRead,
     status_code=status.HTTP_201_CREATED,
+    responses=error_responses(409, 422),
 )
 def register(
     payload: RegisterRequest,
@@ -42,6 +44,7 @@ def register(
 @router.post(
     "/login",
     response_model=TokenResponse,
+    responses=error_responses(401, 422),
 )
 def login(
     payload: LoginRequest,
@@ -66,6 +69,7 @@ def login(
 @router.get(
     "/me",
     response_model=UserRead,
+    responses=error_responses(401),
 )
 def read_me(
     current_user: User = Depends(get_current_user),
@@ -76,6 +80,7 @@ def read_me(
 @router.patch(
     "/me",
     response_model=UserRead,
+    responses=error_responses(401, 422),
 )
 def update_me(
     payload: UpdateMeRequest,

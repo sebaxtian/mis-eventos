@@ -23,6 +23,17 @@ def test_auth_ac_28_openapi_exposes_bearer_and_no_password_hash(
     assert "get" in paths["/api/users/{user_id}"]
     assert "patch" in paths["/api/users/{user_id}"]
 
+    assert {"200", "401", "422"} <= set(
+        paths["/api/auth/login"]["post"]["responses"]
+    )
+    assert {"200", "401", "403", "404", "422"} <= set(
+        paths["/api/users/{user_id}"]["get"]["responses"]
+    )
+    assert {"200", "400", "401", "403", "404", "409", "422"} <= set(
+        paths["/api/users/{user_id}"]["patch"]["responses"]
+    )
+    assert {"200", "503"} <= set(paths["/api/health"]["get"]["responses"])
+
     for forbidden_path in (
         "/api/auth/logout",
         "/api/auth/refresh",

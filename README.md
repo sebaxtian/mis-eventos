@@ -4,7 +4,7 @@ Plataforma web para que la empresa **Mis Eventos** administre sus eventos de pri
 
 Este repositorio es la entrega de la prueba técnica de **Tusdatos.co** (desarrollador full stack), desarrollada con **Spec-Driven Development (SDD)**: la especificación precede al código y cada regla de negocio se cubre con tests.
 
-> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`) y 1 (`auth`) están implementados y validados; `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`. Los dominios `events`, `sessions`, `registrations` y `delivery` siguen pendientes. El producto completo no está terminado.
+> **Estado:** repositorio en fase de implementación incremental mediante SDD. Los Dominios 0 (`platform`), 1 (`auth`) y 2 (`events`) están implementados y validados. `auth` aporta registro, login con JWT, hash argon2id, RBAC, perfil propio y gestión de perfiles por el `ADMIN`; `events` aporta CRUD con estados, búsqueda trigrama, imágenes WebP y caché Redis. Los dominios `sessions`, `registrations` y `delivery` siguen pendientes. El producto completo no está terminado.
 
 ## Tabla de contenido
 
@@ -111,14 +111,14 @@ El trabajo avanza por dominios: cada uno se especifica, se aprueba, se implement
 | :---: | --------------- | ---------------------- | ------------ |
 |   0   | `platform`      | Implementada (v1.0)    | Implementada |
 |   1   | `auth`          | Implementada (v1.0)    | Implementada |
-|   2   | `events`        | Pendiente de redacción | Pendiente    |
+|   2   | `events`        | Implementada (v1.0)    | Implementada |
 |   3   | `sessions`      | Pendiente de redacción | Pendiente    |
 |   4   | `registrations` | Pendiente de redacción | Pendiente    |
 |   5   | `delivery`      | Pendiente de redacción | Pendiente    |
 
-El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform` y `auth` en [specs/platform/spec.md](specs/platform/spec.md) y [specs/auth/spec.md](specs/auth/spec.md).
+El detalle del alcance, las dependencias y el estado oficial de cada spec está en [specs/README.md](specs/README.md); las especificaciones cerradas de `platform`, `auth` y `events` en [specs/platform/spec.md](specs/platform/spec.md), [specs/auth/spec.md](specs/auth/spec.md) y [specs/events/spec.md](specs/events/spec.md).
 
-**Próximos pasos:** iniciar la especificación del dominio `events`. Antes de escribir código deben existir `specs/events/spec.md`, `specs/events/plan.md` y `specs/events/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
+**Próximos pasos:** iniciar la especificación del dominio `sessions`. Antes de escribir código deben existir `specs/sessions/spec.md`, `specs/sessions/plan.md` y `specs/sessions/tasks.md`, y el usuario debe aprobar explícitamente la spec; su implementación no debe iniciarse hasta que esté en estado _Aprobada_ (R1.8 de `docs/constitution.md`).
 
 ## Puesta en marcha
 
@@ -198,7 +198,7 @@ El Dominio 0 (`platform`) fue validado con estas comprobaciones:
 | Contrato de API       | OpenAPI verificado en `/api/openapi.json` y Swagger UI en `/api/docs`                       |
 | Infraestructura       | `docker compose up -d --build` con gateway Nginx, `web`, `api`, `db` y `redis` en ejecución |
 
-El Dominio 1 (`auth`) se validó en su cierre con estas comprobaciones (resultados registrados en [MEMORY.md](MEMORY.md); no se reejecutaron en esta sincronización documental):
+El Dominio 1 (`auth`) se validó en su cierre con estas comprobaciones (resultados registrados en [MEMORY.md](MEMORY.md)):
 
 | Control               | Herramienta / resultado                                                          |
 | --------------------- | -------------------------------------------------------------------------------- |
@@ -211,7 +211,22 @@ El Dominio 1 (`auth`) se validó en su cierre con estas comprobaciones (resultad
 | Contrato de API       | OpenAPI con `HTTPBearer` y sin `password_hash`                                   |
 | Migración             | `0002_create_users (head)` sobre PostgreSQL                                      |
 
-Los porcentajes corresponden a la última validación de `platform` y `auth` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
+El Dominio 2 (`events`) se validó en su cierre con estas comprobaciones (resultados registrados en [MEMORY.md](MEMORY.md)):
+
+| Control               | Herramienta / resultado                                                                       |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| Tests de backend      | `pytest` contra PostgreSQL en contenedor: 69/69 (12 de `platform` + 31 de `auth` + 26 de `events`) |
+| Cobertura de backend  | 96 % con reporte XML (`backend/coverage.xml`)                                                  |
+| Tests de frontend     | Vitest: 45/45 (19 de `platform`/`auth` + 26 de `events`)                                       |
+| Cobertura de frontend | 92.65 % de líneas                                                                              |
+| Tipos del frontend    | `vue-tsc` sin errores                                                                          |
+| Build de producción   | Vite minificado, con chunks por ruta diferida y sin source maps públicos                       |
+| Contrato de API       | OpenAPI con 6 endpoints de `events`, `EventRead` sin `image_key`, `HTTPBearer` y códigos de error declarados |
+| Migración             | `0003_create_events (head)` sobre PostgreSQL                                                   |
+| Caché                 | Redis con prefijo `events:` por `scope`, TTL 60 s e invalidación en cada escritura             |
+| Medios                | Variantes WebP `400w`/`800w`/`1200w` sin EXIF servidas por Nginx con caché inmutable            |
+
+Los porcentajes corresponden a la última validación de `platform`, `auth` y `events` registrada en [MEMORY.md](MEMORY.md). La cobertura es un artefacto generado en cada ejecución y no se versiona; se regenera con los comandos documentados en los READMEs de cada parte.
 
 | Control pendiente          | Dominio responsable                                                                         |
 | -------------------------- | ------------------------------------------------------------------------------------------- |

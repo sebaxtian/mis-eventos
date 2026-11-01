@@ -20,7 +20,30 @@ export const routes: RouteRecordRaw[] = [
   {
     path: '/',
     name: 'home',
-    component: () => import('@/views/HomePlaceholderView.vue'),
+    component: () => import('@/views/EventsListView.vue'),
+  },
+  {
+    path: '/events/new',
+    name: 'event-create',
+    component: () => import('@/views/EventFormView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['ORGANIZER', 'ADMIN'],
+    },
+  },
+  {
+    path: '/events/:id',
+    name: 'event-detail',
+    component: () => import('@/views/EventDetailView.vue'),
+  },
+  {
+    path: '/events/:id/edit',
+    name: 'event-edit',
+    component: () => import('@/views/EventFormView.vue'),
+    meta: {
+      requiresAuth: true,
+      roles: ['ORGANIZER', 'ADMIN'],
+    },
   },
   {
     path: '/login',

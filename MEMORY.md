@@ -8,8 +8,9 @@ Registro vivo del proyecto: decisiones, estado y tropiezos. Las reglas estables 
 
 ## 1. Estado del proyecto
 
-- Dominios 0 (`platform`, v1.0) y 1 (`auth`, v1.0) **Implementados y validados** (`¿pasa? sí`): infraestructura Docker Compose (`gateway` Nginx, `web` Vue 3 + Vite minificado, `api` FastAPI sobre Python 3.14 con UV y Alembic en `0002_create_users (head)` con `pg_trgm`, `db` PostgreSQL 17 con `mis_eventos` y `mis_eventos_test`, `redis` 7 y volumen `media`), autenticación JWT + argon2id, RBAC (`ADMIN`/`ORGANIZER`/`ATTENDEE`), perfil propio, administración de perfiles con protección atómica del último admin, suites de pruebas (`pytest` 43/43 con cobertura XML 94 % y `Vitest` 19/19 con cobertura 89.17 %) y READMEs iniciales de ambos lados.
-- Resto de dominios (`events`, `sessions`, `registrations`, `delivery`) pendientes de redacción. Siguiente dominio: `events`.
+- Dominios 0 (`platform`, v1.0), 1 (`auth`, v1.0) y 2 (`events`, v1.0) **Implementados y validados** (`¿pasa? sí`): infraestructura Docker Compose (`gateway` Nginx, `web` Vue 3 + Vite minificado, `api` FastAPI sobre Python 3.14 con UV y Alembic en `0003_create_events (head)` con `pg_trgm`, `db` PostgreSQL 17 con `mis_eventos` y `mis_eventos_test`, `redis` 7 y volumen `media`), autenticación JWT + argon2id, RBAC (`ADMIN`/`ORGANIZER`/`ATTENDEE`), perfil propio, administración de perfiles con protección atómica del último admin, CRUD completo de eventos con estados (`DRAFT`/`PUBLISHED`/`CANCELLED`), búsqueda trigrama (`ix_events_title_trgm`), imágenes WebP en 3 variantes (`400w`/`800w`/`1200w`) sin EXIF servidas en `/api/media/events/`, caché Redis por `scope` con invalidación, vistas Vue y `EventForm.vue` con `defineAsyncComponent`, suites de pruebas (`pytest` 69 passed con cobertura XML 96 % —43 previos al cierre de `auth` con 94 % y 12 al cierre de `platform` con 85 %— y `Vitest` 45 passed en 10 archivos con cobertura 92.65 % —19 previos al cierre de `auth` con 89.17 % y 6 al cierre de `platform` con 88.75 %—) y validación E2E en el gateway `http://localhost:8080`.
+- Resto de dominios (`sessions`, `registrations`, `delivery`) pendientes de redacción. Siguiente dominio: `sessions`.
+- Documentación raíz (`README.md`, `backend/README.md`, `frontend/README.md` y `AGENTS.md`) sincronizada el 2026-10-31; deuda OpenAPI saldada y entorno de desarrollo sin datos de prueba.
 - Documentación existente: `docs/prueba_tecnica_desarrollador_fullstack.md` (requisitos), `docs/Analisis-Arquitectonico-Funcional-Plataforma-Mis-Eventos.md` (arquitectura v1.1) y `docs/constitution.md` (principios innegociables, v1.1.1).
 - Plazo de la prueba: 5 días desde la recepción.
 
@@ -63,12 +64,30 @@ Registro vivo del proyecto: decisiones, estado y tropiezos. Las reglas estables 
 | 2026-10-31 | `422`: `detail` genérico y mensaje específico en `errors[].message`; `400/401/403/404/409` conservan `detail` | Consistencia con `platform` y mensajes en español |
 | 2026-10-31 | Frontend: single-flight de 401 (un aviso/redirección) conservando `query.redirect`; 403 mantiene sesión | Evita avisos y navegaciones duplicadas (R5.6) |
 | 2026-10-31 | Librerías de soporte (`auth`): `PyJWT`, `argon2-cffi`, `email-validator` | R4.2: JWT, hashing argon2id y validación de email; verificar instalación en Python 3.14 antes de implementar |
+| 2026-10-31 | Visibilidad de eventos (`events`): `GET` con Bearer opcional; Anónimo/`ATTENDEE` ven solo `PUBLISHED` (`404` en detalle de `DRAFT`/`CANCELLED`); `ORGANIZER` ve `PUBLISHED` + propios (`mine=true`); `ADMIN` ve todos | Escaparate público para asistentes y protección contra enumeración de borradores ajenos (R5.3, R5.8) |
+| 2026-10-31 | Propiedad de eventos (`events`): crean `ORGANIZER` y `ADMIN` (`organizer_id = current_user.id` en servidor); editan dueño o `ADMIN` (`403` si ajeno); `ADMIN` preserva `organizer_id` original | Cumple la cadena única de dependencias R5.2 y R5.3 sin transferencia de autoría (R4.5) |
+| 2026-10-31 | Máquina de estados (`events`): alta en `DRAFT` o `PUBLISHED`; transiciones válidas `DRAFT → PUBLISHED`, `DRAFT → CANCELLED`, `PUBLISHED → CANCELLED`; `PUBLISHED → DRAFT` y editar `CANCELLED` devuelven `409` | Estado `CANCELLED` terminal e inmutable y máquina de estados dirigida auditable en TDD (R3.4) |
+| 2026-10-31 | Capacidad (`events`): `total_capacity` (`1..100000`), `EventRead` expone `total_capacity`, `registered_count` y `available_capacity` desde la API; reducir `< registered_count` responde `409` | El frontend nunca recalcula cupos disponibles (R2.5) y deja lista la invariante para `registrations` |
+| 2026-10-31 | Fechas (`events`): un único campo `date: UTCDateTime` (`TIMESTAMP WITH TIME ZONE` UTC, ISO 8601 `Z`), sin bloquear fechas pasadas contra el reloj del sistema; frontera documentada para `sessions` | Fiel al diagrama ER v1.1 §3.4 y garantiza pruebas 100 % deterministas (R3.7) |
+| 2026-10-31 | Búsqueda y paginación (`events`): `search` (`trim`, máx. 100) con `ILIKE '%<escaped>%'` + índice GIN `ix_events_title_trgm` (`gin_trgm_ops`), orden `date ASC, id ASC`, combinable con `page`, `size`, `status` y `mine` | Cumple "búsqueda por nombre o parte del nombre" sobre PostgreSQL con `pg_trgm` (R3.6) |
+| 2026-10-31 | Eliminación (`events`): `DELETE /api/events/{id}` borra físicamente (`204`) y limpia archivos WebP si `registered_count == 0`, y rechaza con `409` si `registered_count > 0` | Completa el CRUD protegiendo la integridad cuando existan asistentes inscritos |
+| 2026-10-31 | Imágenes WebP (`events`): `POST /api/events/{id}/image` (`file`, máx. 5 MB → `413`), Pillow valida JPEG/PNG/WebP reales (`400`), aplica `exif_transpose` + elimina EXIF, genera 3 variantes `400w`/`800w`/`1200w` sin upscaling y expone `image_urls` | Implementa la Arquitectura v1.1 §3.8 y R2.3/R5.8 sin que el frontend construya rutas |
+| 2026-10-31 | Caché Redis (`events`): cachea listado y detalle bajo `events:` con `scope` en la clave (`TTL=60s`), invalida con `invalidate_prefix("events:")` en cada escritura y degrada a PostgreSQL si Redis cae | Cubre el bonus obligatorio de caching y R4.4 sin riesgo de fuga de borradores entre roles |
+| 2026-10-31 | Frontend (`events`): `useEventStore`, rutas `/`, `/events/new`, `/events/:id`, `/events/:id/edit`, `EventCard.vue` con `srcset` WebP y `EventForm.vue` cargado con `defineAsyncComponent` | Alinea el contrato OpenAPI con Vue 3 y cubre el bonus de lazy loading de componentes pesados |
+| 2026-10-31 | Subida de imágenes en el frontend (`events`): `uploadEventImageApi` envía `FormData` con `headers: { 'Content-Type': undefined }` y `EventDetailView.vue` expone el control "Actualizar imagen" para dueño/`ADMIN` | Evita que el `Content-Type: application/json` por defecto de `apiClient` serialice `FormData` como JSON vacío y cumple `EVT-AC-29` |
+| 2026-10-31 | Contrato OpenAPI: declarar los códigos de error por operación con `error_responses(*codes)` y los modelos `ErrorResponse`/`ValidationErrorResponse` | El contrato debe documentar `400/401/403/404/409/413/422/503` además del caso de éxito (R2.4), no solo inferirlos del código |
+| 2026-10-31 | Limpieza de los datos de prueba E2E/QA del entorno de desarrollo (usuarios, eventos, variantes WebP y claves Redis) | Dejar el entorno local reproducible y sin artefactos de validación antes de iniciar `sessions` |
 
 ## 3. Decisiones pendientes
 
 Ninguna pendiente que bloquee dominios.
 
 Las preguntas abiertas no bloqueantes de cada dominio están en `specs/README.md` y se resuelven al redactar su `spec.md`.
+
+Deuda documental/técnica: **saldada el 2026-10-31**.
+- `frontend/README.md` documenta la estructura real del frontend (incluidos los tipos, el servicio, el store, los componentes y las vistas de `events`) y ya no menciona `HomePlaceholderView.vue`.
+- `README.md` raíz refleja `events` como implementado y sus resultados de validación.
+- El contrato OpenAPI declara los códigos `400/401/403/404/409/413/422/503` según la operación mediante el helper `error_responses` de `app/core/exceptions.py`, aplicado a los routers de `health`, `auth`, `users` y `events`.
 
 ## 4. Progreso por entregable
 
@@ -78,7 +97,7 @@ Estado de las specs (fuente de verdad: tabla de estado en `specs/README.md`):
 | :---: | --------------- | ---------------------- |
 |   0   | `platform`      | Implementada (v1.0)    |
 |   1   | `auth`          | Implementada (v1.0)    |
-|   2   | `events`        | Pendiente de redacción |
+|   2   | `events`        | Implementada (v1.0)    |
 |   3   | `sessions`      | Pendiente de redacción |
 |   4   | `registrations` | Pendiente de redacción |
 |   5   | `delivery`      | Pendiente de redacción |
@@ -86,31 +105,35 @@ Estado de las specs (fuente de verdad: tabla de estado en `specs/README.md`):
 Entregables:
 
 - [x] Backend: modelo `User` + migración `0002_create_users` (`auth`)
-- [ ] Backend: modelos `Event`, `Session`, `Registration` + migraciones (`events`, `sessions`, `registrations`)
+- [x] Backend: modelo `Event` + migración `0003_create_events` (`events`)
+- [ ] Backend: modelos `Session`, `Registration` + migraciones (`sessions`, `registrations`)
 - [x] Backend: autenticación y RBAC
-- [ ] Backend: CRUD de eventos con búsqueda por nombre y estados
+- [x] Backend: CRUD de eventos con búsqueda por nombre y estados
 - [ ] Backend: sesiones con validación de solapamiento
 - [ ] Backend: inscripciones con control atómico de capacidad
 - [x] Backend (bonus obligatorio): gestión de perfiles por el Admin
-- [ ] Backend (bonus obligatorio): caché Redis de listados paginados con invalidación en escrituras
+- [x] Backend (bonus obligatorio): caché Redis de listados paginados con invalidación en escrituras (`events`; pendiente invalidación desde `sessions` y `registrations`)
 - [x] Frontend: vistas de login, registro, perfil y administración de usuarios (`auth`)
-- [ ] Frontend: vistas de lista, detalle y crear/editar evento (`events`)
+- [x] Frontend: vistas de lista, detalle y crear/editar evento (`events`)
 - [x] Frontend: store de autenticación + guards de router + interceptor Axios (`auth`)
-- [ ] Frontend: store de eventos (`events`)
-- [ ] Frontend (bonus obligatorio): imágenes WebP con tamaños por dispositivo
+- [x] Frontend: store de eventos (`events`)
+- [x] Frontend (bonus obligatorio): imágenes WebP con tamaños por dispositivo (`events`)
 - [x] Frontend (bonus obligatorio): lazy loading de rutas y build minificado (`platform`)
-- [ ] Frontend (bonus obligatorio): lazy loading de componentes pesados (`events`)
+- [x] Frontend (bonus obligatorio): lazy loading de componentes pesados (`events`)
 - [x] Infra: Dockerfile backend, Dockerfile frontend, `docker-compose.yml`, Nginx
-- [x] Tests backend (pytest + cobertura XML) y frontend (Vitest + cobertura) de `platform` y `auth`
+- [x] Tests backend (pytest + cobertura XML) y frontend (Vitest + cobertura) de `platform`, `auth` y `events`
 - [x] README de `backend/` y de `frontend/`
-- [ ] Documentación de estructura del frontend (`delivery`)
-- [x] Swagger/OpenAPI verificado (`platform` y `auth`)
+- [x] Documentación de estructura del frontend (`frontend/README.md`, incluido `events`)
+- [x] Swagger/OpenAPI verificado (`platform`, `auth` y `events`)
+- [x] Contrato OpenAPI con códigos de error declarados por operación (`health`, `auth`, `users` y `events`)
 
-Siguiente dominio: `events` (redactar y aprobar `spec.md`, `plan.md` y `tasks.md` antes de implementar).
+Siguiente dominio: `sessions` (redactar y aprobar `spec.md`, `plan.md` y `tasks.md` antes de implementar).
 
 ## 5. Tropiezos y correcciones
 
-Formato: `síntoma → causa → solución`. Vacío hasta que aparezca el primer problema real.
+- `POST /api/events/{id}/image` desde la UI devolvía `422` (`{"file":{}}`) → la instancia Axios `apiClient` fijaba `headers: { 'Content-Type': 'application/json' }` por defecto, provocando que Axios serializara el `FormData` como JSON en lugar de `multipart/form-data; boundary=...` → en `uploadEventImageApi` (`frontend/src/services/events.ts`) se pasa `headers: { 'Content-Type': undefined }` para que el navegador/Axios genere el boundary multipart real y se añadió un test unitario con el adapter real de Axios; además se añadió el control "Actualizar imagen" en `EventDetailView.vue` (`EVT-AC-29`), navegación al detalle con aviso si falla la subida tras crear/editar, y captura de `ValueError`/`TypeError` en `CacheClient.get`.
+- `test_plat_ac_11_postgres_test_db_and_pg_trgm_enabled` fallaba tras añadir la migración `0003_create_events` → el test de `backend/tests/test_platform.py` comparaba `version_num` con el literal fijo `"0002_create_users"` en lugar de consultar dinámicamente la cabeza de Alembic → se añadió el helper `_alembic_head()` con `ScriptDirectory.from_config(...).get_current_head()` y la aserción compara `version_num == _alembic_head()` (para que futuras migraciones no vuelvan a romper el test), manteniendo intactas las demás aserciones del criterio (`dialect.name == "postgresql"`, base `mis_eventos_test`, `pg_trgm`, `similarity() > 0.5` y `callable(db_truncate)`).
+- El contrato OpenAPI no declaraba los códigos de error por operación → cada router solo describía el `response_model` de éxito (convención heredada de `platform`) → se añadió `error_responses(*codes)` en `app/core/exceptions.py` y se declararon `400/401/403/404/409/413/422/503` según la operación en los routers de `health`, `auth`, `users` y `events`, con los modelos `ErrorResponse` y `ValidationErrorResponse`; verificado en `/api/openapi.json`.
 
 ## 6. Bitácora de sesiones
 
@@ -128,3 +151,7 @@ Formato: `síntoma → causa → solución`. Vacío hasta que aparezca el primer
 - **2026-10-31** — Aprobación registrada y paso a `En implementación`: `specs/README.md` alineado (§1.1 con argon2id y sin la decisión pendiente de JWT; §5 en `En implementación` v1.0) y `MEMORY.md` §4 actualizado. Siguiente: TDD backend `B1..B31` y luego frontend `F1..F13` + validación `V1..V4`.
 - **2026-10-31** — Implementación y validación del Dominio 1 (`auth`): completadas las 48 tareas TDD (`B1..B31`, `F1..F13`, `V1..V4`) y auditadas por `reviewer` con veredicto `¿pasa? sí` (31/31 criterios `AUTH-AC-01..31` verificados). Backend: `uv run pytest --cov=app --cov-report=xml --cov-report=term-missing` con 43 passed en 2.17s y cobertura 94 % (`backend/coverage.xml`), migración `0002_create_users (head)` aplicada sobre PostgreSQL (`mis_eventos` y `mis_eventos_test`). Frontend: `npx vitest run --coverage` con 19 passed en 6 archivos y cobertura 89.17 % Lines (83.09 % Branches, 85.71 % Functions), `npx vue-tsc --noEmit` sin errores y `npm run build` con chunks lazy minificados (`LoginView`, `RegisterView`, `ProfileView`, `AdminUsersView`) sin `.map`. Verificado en `http://localhost:8080` con `chrome-devtools-mcp` (registro, login, perfil, `sessionStorage`, guards, rutas `/api` relativas, 0 errores de consola), `/api/openapi.json` (`HTTPBearer`, sin `password_hash`) y `context7-mcp` (`argon2-cffi`, `PyJWT`); `postgres-mcp` devolvió `28P01` por URI del proceso host y el esquema se verificó directamente contra PostgreSQL con `alembic` y `test_auth_ac_02_users_email_unique_constraint_and_indexes`. `specs/auth/spec.md` pasa a estado `Implementada (v1.0)`. Siguiente dominio: `events`.
 - **2026-10-31** — Sincronización documental tras el cierre de `auth`: actualizados `README.md` (estado, tabla de dominios, próximos pasos hacia `events` y resultados de calidad registrados), `AGENTS.md` (contexto operativo con `platform` y `auth` implementados, `events` como siguiente dominio y separación entre estado histórico y validaciones no reejecutadas) y la checklist de `MEMORY.md`. `auth` ya estaba implementado y validado según la evidencia existente (`specs/README.md`, `specs/auth/spec.md`, `specs/auth/tasks.md` y las entradas previas). En esta tarea no se ejecutaron tests, Docker, builds, migraciones ni MCP. Siguiente paso: especificar `events`.
+- **2026-10-31** — Especificación del Dominio 2 (`events`): resueltas con el usuario las 10 decisiones bloqueantes (visibilidad pública de `PUBLISHED` con Bearer opcional y `mine=true`, propiedad y conservación de `organizer_id`, máquina de estados con `CANCELLED` terminal e inmutable y rechazo `409` de `PUBLISHED → DRAFT`, capacidad `total_capacity`/`registered_count`/`available_capacity` desde el backend, fecha única `date: UTCDateTime`, búsqueda `ILIKE` con escape + índice GIN `ix_events_title_trgm`, borrado físico `204` solo cuando `registered_count == 0`, subida de imagen `POST /api/events/{id}/image` hasta 5 MB con Pillow + `exif_transpose` + sin EXIF + 3 variantes WebP `400w`/`800w`/`1200w` sin upscaling, caché Redis por `scope` con TTL 60 s e invalidación `events:`, y contrato REST + vistas Vue con `EventCard.vue` y `EventForm.vue` vía `defineAsyncComponent`). Contrastadas con `context7-mcp` las APIs de Pillow (`Image.save` WebP, `ImageOps.exif_transpose`) y SQLAlchemy (`Index(..., postgresql_using="gin", postgresql_ops=...)`). Creados `specs/events/spec.md`, `specs/events/plan.md` y `specs/events/tasks.md` en estado `Borrador` (v0.1) con 10 reglas `EVT-BR-01..10`, 30 criterios EARS `EVT-AC-01..30` y 35 tareas TDD (`B1..B25`, `F1..F6`, `V1..V4`). Actualizados `specs/README.md` y `MEMORY.md`. Siguiente paso: esperar la revisión y aprobación explícita del usuario (R1.8) antes de pasar `events` a `Aprobada`.
+- **2026-10-31** — Aprobación del Dominio 2 (`events`) y paso a `En implementación`: el usuario aprobó explícitamente `specs/events/spec.md` ("Apruebo la spec de events, proceda"), pasando de `Borrador → Aprobada` (v1.0) y autorizando la transición inmediata a `En implementación` (R1.8). Actualizados `specs/events/spec.md`, `specs/README.md` y `MEMORY.md`. Siguiente: iniciar el ciclo de implementación TDD por `B1` (`backend/app/events/models.py` + migración `0003_create_events.py`).
+- **2026-10-31** — Implementación y validación del Dominio 2 (`events`): completadas las 35 tareas TDD (`B1..B25`, `F1..F6`, `V1..V4`) y auditadas por `reviewer` con veredicto `¿pasa? sí` (30/30 criterios `EVT-AC-01..30` verificados). Backend: `uv run pytest --cov=app --cov-report=xml --cov-report=term-missing` con 69 passed, 0 failed y cobertura total 96 % (`backend/coverage.xml`; `tests/test_events.py` con 26 tests; cobertura 100 % en `app/events/{models,schemas,router,service,images}.py`, 91 % en `app/events/dependencies.py` y 100 % en `app/core/cache.py`), migración `0003_create_events (head)` aplicada sobre PostgreSQL (`0001_enable_pg_trgm → 0002_create_users → 0003_create_events`). Frontend: `npm run test -- --run` con 45 passed en 10 archivos (19 previos + 26 de `events`), `npx vitest run --coverage` con 92.65 % statements / 83.78 % branches / 90.17 % functions / 92.65 % lines, `npx vue-tsc --noEmit` con 0 errores y `npm run build` con 126 módulos y chunks lazy minificados sin `.map` (`EventsListView`, `EventDetailView`, `EventFormView`, `EventForm`). E2E validado en `http://localhost:8080` con `docker compose up -d --build` (5 servicios; `api`, `db`, `redis` healthy; `/api/health` 200) y `chrome-devtools-mcp`: catálogo, login `ORGANIZER`, alta `DRAFT` (`201`), subida real `POST /api/events/{id}/image` (`200` multipart con variantes WebP `400w`/`800w`/`1200w` servidas en `/api/media/events/` con `image/webp` y `Cache-Control: public, max-age=31536000, immutable`, sin EXIF y borrando variantes previas), publicación (`PATCH 200`), búsqueda, paginación, guards, `404` en borrador ajeno, claves Redis `events:list:scope=public|org:{id}:...` invalidadas tras `PATCH`, degradación ante payload corrupto y `/api/openapi.json` con los 6 endpoints de `events` sin `image_key` en `EventRead`. `context7-mcp` usado para Axios/FormData y Pillow; `postgres-mcp` devolvió `28P01` por configuración local del proceso host (esquema verificado con `docker compose exec db psql` en solo lectura). Datos de prueba creados en la BD de desarrollo durante la validación E2E: usuarios `reviewer.evt.org.…` / `reviewer.evt.att.…` y eventos 1 y 2. `specs/events/spec.md` pasa a estado `Implementada (v1.0)`. Siguiente dominio: `sessions`.
+- **2026-10-31** — Saldo de la deuda documental y limpieza del entorno: eliminados los datos de prueba E2E/QA del entorno de desarrollo (usuarios ids 1–4, eventos ids 1–2, las tres variantes WebP del volumen `media` y las claves `events:*` de Redis; verificado con `users=0`, `events=0` y `find /app/media` sin archivos). Actualizados `README.md` raíz (estado de `events`, tabla de dominios, próximos pasos hacia `sessions` y resultados de calidad), `frontend/README.md` (estructura real con tipos, servicio, store, componentes y vistas de `events`, rutas, comandos, cobertura y cliente HTTP), `backend/README.md` (estructura, endpoints, imágenes, caché y cifras) y `AGENTS.md` (estado, entregables y validación). Resuelta la deuda OpenAPI con `error_responses` en los routers de `health`, `auth`, `users` y `events`, y verificada en el gateway. Reejecutados `pytest` 69/69 (96 %), `Vitest` 45/45 y `vue-tsc` sin errores; API reconstruida y `/api/openapi.json` con los códigos declarados. Siguiente: redactar y aprobar `sessions` (R1.8) antes de implementar.

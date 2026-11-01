@@ -19,6 +19,8 @@ class Settings(BaseSettings):
     media_root: str = "/app/media"
     jwt_secret_key: str = Field(default=JWT_SECRET_PLACEHOLDER, repr=False)
     jwt_expire_minutes: int = 480
+    cache_events_ttl_seconds: int = 60
+    max_event_image_bytes: int = 5 * 1024 * 1024
     bootstrap_admin_email: str | None = None
     bootstrap_admin_password: str | None = Field(default=None, repr=False)
     bootstrap_admin_full_name: str = "Administrador"

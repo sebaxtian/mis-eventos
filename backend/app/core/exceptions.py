@@ -3,6 +3,7 @@ from typing import Any
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from pydantic import BaseModel
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,55 @@ ENGLISH_DEFAULT_PHRASES: dict[str, str] = {
     "Internal Server Error": "Error interno del servidor",
     "Service Unavailable": "Servicio de base de datos no disponible",
 }
+
+
+class ErrorResponse(BaseModel):
+    """Standard error payload returned by the API."""
+
+    detail: str
+
+
+class ValidationErrorItem(BaseModel):
+    """Field-level validation error."""
+
+    field: str
+    message: str
+
+
+class ValidationErrorResponse(BaseModel):
+    """Payload returned for request validation failures (HTTP 422)."""
+
+    detail: str
+    errors: list[ValidationErrorItem]
+
+
+_ERROR_DESCRIPTIONS: dict[int, str] = {
+    400: "Solicitud inválida",
+    401: "No autenticado o sesión expirada",
+    403: "No tienes permisos para realizar esta acción",
+    404: "Recurso no encontrado",
+    409: "Conflicto con el estado actual del recurso",
+    413: "La imagen no debe superar los 5 MB",
+    422: "Error de validación en los datos enviados",
+    503: "Servicio de base de datos no disponible",
+}
+
+
+def error_responses(*codes: int) -> dict[int, dict[str, Any]]:
+    """Build the ``responses`` mapping declared in the OpenAPI contract.
+
+    Usage: ``@router.get(..., responses=error_responses(401, 404))``.
+    """
+
+    return {
+        code: {
+            "model": (
+                ValidationErrorResponse if code == 422 else ErrorResponse
+            ),
+            "description": _ERROR_DESCRIPTIONS.get(code, "Error"),
+        }
+        for code in codes
+    }
 
 
 def _extract_field_name(loc: tuple[Any, ...] | list[Any]) -> str:

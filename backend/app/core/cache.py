@@ -35,7 +35,7 @@ class CacheClient:
             if raw is None:
                 return None
             return json.loads(raw)
-        except RedisError as exc:
+        except (RedisError, ValueError, TypeError) as exc:
             logger.warning("Redis get failed for key '%s': %s", key, exc)
             return None
 

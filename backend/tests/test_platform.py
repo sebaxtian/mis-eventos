@@ -1,6 +1,19 @@
+from pathlib import Path
+
+from alembic.config import Config
+from alembic.script import ScriptDirectory
 from fastapi.testclient import TestClient
 from sqlalchemy import text
 from sqlmodel import Session
+
+
+def _alembic_head() -> str | None:
+    backend_dir = Path(__file__).resolve().parent.parent
+    alembic_cfg = Config(str(backend_dir / "alembic.ini"))
+    alembic_cfg.set_main_option(
+        "script_location", str(backend_dir / "migrations")
+    )
+    return ScriptDirectory.from_config(alembic_cfg).get_current_head()
 
 
 def test_plat_ac_11_postgres_test_db_and_pg_trgm_enabled(
@@ -26,7 +39,7 @@ def test_plat_ac_11_postgres_test_db_and_pg_trgm_enabled(
     version_num = db_session.exec(
         text("SELECT version_num FROM alembic_version")
     ).scalar_one_or_none()
-    assert version_num == "0002_create_users"
+    assert version_num == _alembic_head()
     assert callable(db_truncate)
 
 
